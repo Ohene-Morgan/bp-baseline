@@ -19,7 +19,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=13">
+<link rel="stylesheet" href="styles.css?v=14">
 <script>
   // Apply the saved theme before first paint to avoid a flash.
   try { var t = localStorage.getItem('bp-baseline:theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -134,7 +134,7 @@
       <div class="seg" id="themeSeg" role="group" aria-label="Theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div></div></div>
 
     <h2 class="group-title">You</h2>
-    <div class="group"><div class="row static"><span class="row-main"><span class="row-t">Your name</span><span class="row-s">Used for the greeting</span></span><input type="text" id="setName" class="name-in" maxlength="30" placeholder="Name" autocomplete="given-name" aria-label="Your name"></div></div>
+    <div class="group"><div class="row static"><span class="row-main"><span class="row-t">Your name</span></span><input type="text" id="setName" class="name-in" maxlength="30" placeholder="Add your name" autocomplete="given-name" aria-label="Your name"></div></div>
 
     <h2 class="group-title">Daily reminder</h2>
     <div class="group">
@@ -176,8 +176,6 @@
       </table>
       <p class="fine">Categories follow the AHA/ACC guideline, unchanged in the 2025 update. A diagnosis needs averaged readings on more than one occasion. Source: <a href="https://www.ahajournals.org/doi/10.1161/HYP.0000000000000249" target="_blank" rel="noopener">2025 AHA/ACC High Blood Pressure Guideline</a>. “Low” (under 90/60) is an informal flag, not a guideline category.</p>
     </article>
-
-    <p class="disclaimer"><strong>Not medical advice.</strong> Kayline is not a medical device and does not diagnose anything. Home readings vary with the cuff, the day and your technique. Talk to a doctor or pharmacist about your numbers, and use a validated upper-arm monitor. If you have chest pain, trouble breathing, weakness, vision changes or trouble speaking, call emergency services.</p>
   </section>
 </main>
 
@@ -313,7 +311,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <div class="tip" id="tip" hidden></div>
 
-<script src="ai.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="ai.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>
