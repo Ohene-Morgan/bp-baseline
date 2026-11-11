@@ -19,7 +19,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="styles.css?v=9">
 <script>
   // Apply the saved theme before first paint to avoid a flash.
   try { var t = localStorage.getItem('bp-baseline:theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -133,6 +133,9 @@
     <div class="group"><div class="row static"><span class="row-main"><span class="row-t">Theme</span></span>
       <div class="seg" id="themeSeg" role="group" aria-label="Theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div></div></div>
 
+    <h2 class="group-title">You</h2>
+    <div class="group"><div class="row static"><span class="row-main"><span class="row-t">Your name</span><span class="row-s">Used for the greeting</span></span><input type="text" id="setName" class="name-in" maxlength="30" placeholder="Name" autocomplete="given-name" aria-label="Your name"></div></div>
+
     <h2 class="group-title">Daily reminder</h2>
     <div class="group">
       <div class="row static"><span class="row-main"><span class="row-t">Reminder time</span><span class="row-s">A repeating event in your calendar app</span></span><input type="time" id="remTime" class="time-in" value="20:00" aria-label="Reminder time"></div>
@@ -190,20 +193,26 @@
 <dialog id="logDialog" aria-labelledby="logTitle">
   <form id="logForm" method="dialog" novalidate>
     <div class="grab" aria-hidden="true"></div>
-    <div class="sheet-head center">
+    <div class="sheet-head">
+      <button type="button" class="text-btn" id="cancelLog">Cancel</button>
       <h2 id="logTitle">New reading</h2>
+      <span class="head-spacer"></span>
     </div>
     <div class="sheet-body">
       <div class="field when">
-        <input type="datetime-local" id="fWhen" required aria-label="Date and time of reading">
-        <div class="quick" id="quickTimes">
+        <input type="hidden" id="fWhen">
+        <div class="when-row">
+          <label class="dt-pill" id="datePill"><span class="dt-ic" aria-hidden="true"><svg class="i" width="17" height="17" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span><span class="dt-text"><span class="dt-k">Date</span><span class="dt-v" id="dateText">Today</span></span><input type="date" id="fDate" aria-label="Date of reading" required></label>
+          <label class="dt-pill" id="timePill"><span class="dt-ic warm" aria-hidden="true"><svg class="i" width="17" height="17" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span><span class="dt-text"><span class="dt-k">Time</span><span class="dt-v" id="timeText">12:00 PM</span></span><input type="time" id="fTime" aria-label="Time of reading" required></label>
+        </div>
+        <div class="quick" id="quickTimes" role="group" aria-label="Quick times">
           <button type="button" data-q="now">Now</button><button type="button" data-q="am">This morning</button><button type="button" data-q="pm">This evening</button>
         </div>
       </div>
       <div class="field">
         <span class="label">Readings <span class="hint">from your cuff, in mmHg</span></span>
         <div id="readingRows"></div>
-        <button type="button" class="link-btn" id="addRow">Add another reading <span class="hint">2–3, a minute apart, is most accurate</span></button>
+        <div class="add-line"><button type="button" class="link-btn" id="addRow">+ Add another reading</button><span class="hint">2–3, a minute apart, is most accurate</span></div>
         <div class="preview" id="preview" aria-live="polite"></div>
       </div>
       <div class="field two">
@@ -224,11 +233,23 @@
       <p class="std-note" id="stdNote"></p>
     </div>
     <div class="sheet-foot">
-      <div class="pill-actions">
-        <button type="button" class="pill-btn" id="cancelLog">Cancel</button>
-        <span class="pill-sep" aria-hidden="true"></span>
-        <button type="submit" class="pill-btn strong" id="saveLog" disabled>Save</button>
-      </div>
+      <button type="submit" class="btn primary block" id="saveLog" disabled>Save reading</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ========== Welcome sheet (asks her name once) ========== -->
+<dialog id="nameDialog" aria-labelledby="nameTitle">
+  <form id="nameForm" method="dialog" novalidate>
+    <div class="grab" aria-hidden="true"></div>
+    <div class="sheet-head center"><h2 id="nameTitle">Welcome to Baseline</h2></div>
+    <div class="sheet-body">
+      <p class="lead">A calm place to keep track of your blood pressure. What should we call you? It stays on this device.</p>
+      <input type="text" id="nameIn" maxlength="30" placeholder="Your name" autocomplete="given-name" aria-label="Your name">
+    </div>
+    <div class="sheet-foot col">
+      <button type="submit" class="btn primary block" id="nameSave">Continue</button>
+      <button type="button" class="link-btn" id="nameSkip">Not now</button>
     </div>
   </form>
 </dialog>
@@ -289,7 +310,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <div class="tip" id="tip" hidden></div>
 
-<script src="ai.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script src="ai.js?v=9"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

@@ -19,17 +19,17 @@ const writeMeta = patch => store.set(META_KEY, JSON.stringify({ ...readMeta(), .
 
 /* ============ domain constants ============ */
 const TAGS = [
-  { id: 'rested',   label: 'Rested 5+ min',  disturbs: false },
-  { id: 'caffeine', label: 'Caffeine',       disturbs: true },
-  { id: 'exercise', label: 'Exercise',       disturbs: true },
-  { id: 'meal',     label: 'Just ate',       disturbs: true },
-  { id: 'stressed', label: 'Stressed',       disturbs: true },
-  { id: 'sleep',    label: 'Poor sleep',     disturbs: false },
-  { id: 'alcohol',  label: 'Alcohol',        disturbs: true },
-  { id: 'nicotine', label: 'Nicotine',       disturbs: true },
-  { id: 'bladder',  label: 'Full bladder',   disturbs: true },
-  { id: 'ill',      label: 'Ill or in pain', disturbs: true },
-  { id: 'meds',     label: 'Took meds',      disturbs: false },
+  { id: 'rested',   label: 'Rested 5+ min',  emoji: '🧘', disturbs: false },
+  { id: 'caffeine', label: 'Caffeine',       emoji: '☕', disturbs: true },
+  { id: 'exercise', label: 'Exercise',       emoji: '🏃', disturbs: true },
+  { id: 'meal',     label: 'Just ate',       emoji: '🍽️', disturbs: true },
+  { id: 'stressed', label: 'Stressed',       emoji: '😣', disturbs: true },
+  { id: 'sleep',    label: 'Poor sleep',     emoji: '😴', disturbs: false },
+  { id: 'alcohol',  label: 'Alcohol',        emoji: '🍷', disturbs: true },
+  { id: 'nicotine', label: 'Nicotine',       emoji: '🚬', disturbs: true },
+  { id: 'bladder',  label: 'Full bladder',   emoji: '🚻', disturbs: true },
+  { id: 'ill',      label: 'Ill or in pain', emoji: '🤒', disturbs: true },
+  { id: 'meds',     label: 'Took meds',      emoji: '💊', disturbs: false },
 ];
 const TAG = Object.fromEntries(TAGS.map(t => [t.id, t]));
 const DISTURBERS = TAGS.filter(t => t.disturbs).map(t => t.id);
@@ -99,7 +99,7 @@ function ago(ts) {
   return d === 1 ? 'yesterday' : `${d} days ago`;
 }
 const chip = cat => `<span class="chip cat-${cat}"><i class="d" aria-hidden="true"></i>${CATS[cat].label}</span>`;
-const tagPills = tags => tags.map(t => TAG[t] ? `<span class="tagpill">${TAG[t].label}</span>` : '').join('');
+const tagPills = tags => tags.map(t => TAG[t] ? `<span class="tagpill">${TAG[t].emoji} ${TAG[t].label}</span>` : '').join('');
 const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
 /* ============ state ============ */
@@ -310,9 +310,21 @@ function go(view, animate = true) {
   state.animChart = animate;
   renderView(view);
   if (animate) { if (changed) window.scrollTo(0, 0); enter($('#view-' + view)); }
+  requestAnimationFrame(() => refreshSegs());
+}
+/* Greeting that follows the time of day and her name. */
+const getName = () => String(readMeta().name || '').trim();
+function renderTodayHead() {
+  const h = new Date().getHours(), name = getName();
+  const g = h < 5 ? 'Hi' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  $('#h-today').textContent = name ? `${g}, ${name}` : 'Today';
+}
+function maybeWelcome() {
+  const m = readMeta();
+  if (!m.name && !m.nameAsked && !state.sessions.length && !location.hash.startsWith('#log')) setTimeout(() => { openSheet($('#nameDialog')); setTimeout(() => $('#nameIn').focus({ preventScroll: true }), 420); }, 700);
 }
 function renderView(v = state.view) {
-  if (v === 'today') { renderStreak(); renderHero(); renderWeek(); renderBackup(); }
+  if (v === 'today') { renderTodayHead(); renderStreak(); renderHero(); renderWeek(); renderBackup(); }
   if (v === 'trends') { renderTrend(); renderCategory(); renderContext(); }
   if (v === 'insights') renderPane();
   if (v === 'settings') renderSettings();
@@ -561,7 +573,8 @@ function celebrate(n) {
   const el = $('#celebrate');
   const lines = { 3: 'Three days in a row. A habit is forming.', 7: 'A full week. That is what makes a real baseline.', 14: 'Two weeks of readings. Your baseline is getting reliable.', 21: 'Three weeks. This is a habit now.', 30: 'A whole month of showing up for your health.' };
   $('#celTitle').textContent = `${n}-day streak`;
-  $('#celText').textContent = lines[n] || `${n} days of looking after yourself. Keep it going.`;
+  const base = lines[n] || `${n} days of looking after yourself. Keep it going.`, who = getName();
+  $('#celText').textContent = who ? `${who}, ${base[0].toLowerCase()}${base.slice(1)}` : base;
   $('#celFlame').innerHTML = FLAME;
   const burst = $('#celBurst'); burst.innerHTML = '';
   if (!RM()) for (let i = 0; i < 18; i++) {
@@ -839,6 +852,7 @@ function renderSettings() {
   const mode = store.get(THEME_KEY) || 'auto';
   $$('#themeSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeSet === mode)));
   $('#remTime').value = readMeta().remTime || '20:00';
+  if (document.activeElement !== $('#setName')) $('#setName').value = getName();
   $('#aiRowSub').textContent = AI.statusText();
   $('#aiRow .row-t').textContent = AI.connected() ? 'Claude AI' : 'Connect Claude';
   updateInstallUI();
@@ -915,21 +929,60 @@ function openLog(session) {
   $('#formError').hidden = true;
   const last = state.sessions[state.sessions.length - 1];
   form = { arm: session ? session.arm : (last ? last.arm : 'L'), pos: session ? session.pos : 'seated', tags: new Set(session ? session.tags : []) };
-  $('#tagChips').innerHTML = TAGS.map(t => `<button type="button" data-t="${t.id}" aria-pressed="false">${t.label}</button>`).join('');
-  $('#fWhen').value = toInput(session ? session.ts : Date.now());
+  $('#tagChips').innerHTML = TAGS.map(t => `<button type="button" data-t="${t.id}" aria-pressed="false"><span class="em" aria-hidden="true">${t.emoji}</span>${t.label}</button>`).join('');
+  setWhen(session ? session.ts : Date.now());
   $('#fNote').value = session ? (session.note || '') : '';
   const rd = session ? (session.readings && session.readings.length ? session.readings : [{ sys: session.sys, dia: session.dia, pulse: session.pulse }]) : [null];
   rd.forEach(r => addRow(r));
   syncFormUI(); updatePreview();
   openSheet($('#logDialog'));
+  requestAnimationFrame(() => refreshSegs());
   setTimeout(() => { const f = $('[data-f=sys]'); if (f && !session) f.focus({ preventScroll: true }); }, 380);
+}
+/* Date and time: friendly pills over native pickers, kept in sync with one hidden value (YYYY-MM-DDTHH:mm). */
+function setWhen(ts) {
+  const v = toInput(ts);
+  $('#fWhen').value = v; $('#fDate').value = v.slice(0, 10); $('#fTime').value = v.slice(11, 16);
+  $('#fDate').max = toInput(Date.now()).slice(0, 10);
+  updateWhenText();
+}
+function updateWhenText() {
+  const ts = new Date($('#fWhen').value).getTime(); if (!Number.isFinite(ts)) return;
+  const diff = Math.round((startOfDay(Date.now()) - startOfDay(ts)) / DAY);
+  $('#dateText').textContent = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : new Date(ts).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  $('#timeText').textContent = fmtTime(ts);
+}
+function onWhenInput() {
+  const d = $('#fDate').value, t = $('#fTime').value;
+  if (d && t) { $('#fWhen').value = `${d}T${t}`; updateWhenText(); }
 }
 function quickTime(kind) {
   const d = new Date();
   if (kind === 'am') d.setHours(8, 0, 0, 0);
   if (kind === 'pm') d.setHours(20, 0, 0, 0);
   if (d.getTime() > Date.now()) d.setDate(d.getDate() - 1);
-  $('#fWhen').value = toInput(d.getTime());
+  setWhen(d.getTime());
+}
+
+/* ============ glass segmented controls: a sliding thumb behind the selected option ============ */
+function layoutSeg(seg) {
+  let t = seg.querySelector(':scope > .thumb');
+  const fresh = !t;
+  if (fresh) { t = document.createElement('i'); t.className = 'thumb'; t.setAttribute('aria-hidden', 'true'); t.style.transition = 'none'; seg.prepend(t); }
+  const on = seg.querySelector('button[aria-pressed="true"]');
+  if (!on || !seg.offsetWidth) { t.style.opacity = '0'; return; }
+  t.style.opacity = '1'; t.style.width = on.offsetWidth + 'px'; t.style.height = on.offsetHeight + 'px';
+  t.style.transform = `translate(${on.offsetLeft}px, ${on.offsetTop}px)`;
+  if (fresh) requestAnimationFrame(() => { t.style.transition = ''; });
+}
+function refreshSegs() { $$('.seg').forEach(layoutSeg); }
+let segRaf = 0;
+function watchSegs() {
+  const sched = () => { if (!segRaf) segRaf = requestAnimationFrame(() => { segRaf = 0; refreshSegs(); }); };
+  new MutationObserver(sched).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-pressed'] });
+  window.addEventListener('resize', sched); window.addEventListener('load', sched);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(sched);
+  sched();
 }
 function submitForm(e) {
   e.preventDefault();
@@ -1045,7 +1098,16 @@ function wire() {
     if (e.target.classList.contains('rm')) { e.target.closest('.rrow').remove(); $$('.rrow').forEach((r, i) => { r.dataset.i = i; $('.rm', r).hidden = i === 0; }); $('#addRow').hidden = false; updatePreview(); }
   });
   $('#addRow').addEventListener('click', () => { addRow(); const rs = $$('.rrow'); $('[data-f=sys]', rs[rs.length - 1]).focus(); });
-  $('#quickTimes').addEventListener('click', e => { const q = e.target.dataset.q; if (!q) return; if (q === 'now') $('#fWhen').value = toInput(Date.now()); else quickTime(q); });
+  $('#quickTimes').addEventListener('click', e => { const q = e.target.dataset.q; if (!q) return; if (q === 'now') setWhen(Date.now()); else quickTime(q); });
+  ['#fDate', '#fTime'].forEach(s => $(s).addEventListener('input', onWhenInput));
+  ['#datePill', '#timePill'].forEach(s => $(s).addEventListener('click', e => { const i = $('input', e.currentTarget); if (e.target !== i) { try { i.showPicker(); } catch (err) { i.focus(); } } }));
+
+  // Welcome sheet and name setting
+  const nameDlg = $('#nameDialog');
+  wireSheet(nameDlg, [$('#nameSkip')]);
+  nameDlg.addEventListener('close', () => { writeMeta({ nameAsked: true }); renderTodayHead(); });
+  $('#nameForm').addEventListener('submit', e => { e.preventDefault(); const n = $('#nameIn').value.trim(); if (n) writeMeta({ name: n }); closeSheet(nameDlg); renderTodayHead(); });
+  $('#setName').addEventListener('input', e => { writeMeta({ name: e.target.value.trim() }); renderTodayHead(); });
   $('#armSeg').addEventListener('click', e => { if (e.target.dataset.v) { form.arm = e.target.dataset.v; syncFormUI(); } });
   $('#posSeg').addEventListener('click', e => { if (e.target.dataset.v) { form.pos = e.target.dataset.v; syncFormUI(); } });
   $('#tagChips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const t = b.dataset.t; form.tags.has(t) ? form.tags.delete(t) : form.tags.add(t); syncFormUI(); if (navigator.vibrate) navigator.vibrate(6); });
@@ -1088,7 +1150,7 @@ function wire() {
   $('#remBtn').addEventListener('click', downloadReminder);
   $('#shareSummary').addEventListener('click', shareSummary);
   // Coming back to the app later in the day (or after midnight) should show the current streak state.
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.view === 'today') { renderStreak(); renderWeek(); } });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.view === 'today') { renderTodayHead(); renderStreak(); renderWeek(); } });
   $('#remTime').addEventListener('change', e => writeMeta({ remTime: e.target.value }));
   $('#installBtn').addEventListener('click', async () => {
     if (!deferredInstall) return;
@@ -1126,6 +1188,8 @@ $('#storageWarn').hidden = storageOK;
   const wantsLog = location.hash === '#log';
   go(viewFromHash() || 'today');
   if (wantsLog) { history.replaceState(null, '', '#' + state.view); openLog(); }
+  watchSegs();
+  maybeWelcome();
 }
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

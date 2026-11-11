@@ -1,7 +1,7 @@
 /* Baseline service worker: network-first for the app shell, with an offline fallback.
    Only same-origin GET requests are handled; calls to api.anthropic.com pass straight through. */
-const CACHE = 'baseline-v8';
-const SHELL = ['./', 'index.html', 'styles.css?v=8', 'app.js?v=8', 'ai.js?v=8', 'manifest.webmanifest',
+const CACHE = 'baseline-v9';
+const SHELL = ['./', 'index.html', 'styles.css?v=9', 'app.js?v=9', 'ai.js?v=9', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png'];
 
 self.addEventListener('install', e => {
