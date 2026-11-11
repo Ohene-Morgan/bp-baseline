@@ -241,9 +241,8 @@ function buildInsights(base) {
       text: pct >= 70 ? `${pct}% of your readings were taken under standard conditions. That makes your baseline trustworthy.`
         : `Only ${pct}% of readings were under standard conditions (seated, no caffeine, exercise, meal or stress). More of those will sharpen your baseline.` });
   }
-  const keys = new Set(ss.map(s => dayKey(s.ts)));
-  let streak = 0; for (let i = 0; i < 365; i++) { if (keys.has(dayKey(now - i * DAY))) streak++; else if (i === 0) continue; else break; }
-  if (streak >= 2) out.push({ ic: 'flame', title: `${streak}-day streak`, text: 'You have logged readings on consecutive days. Consistency is what turns numbers into a baseline.' });
+  const sk = computeStreak();
+  if (sk.current >= 2) out.push({ ic: 'flame', title: `${sk.current}-day streak`, text: `You have logged on ${sk.current} days in a row${sk.best > sk.current ? ` (your best is ${sk.best})` : ''}. Consistency is what turns numbers into a baseline.` });
   return out;
 }
 
@@ -313,7 +312,7 @@ function go(view, animate = true) {
   if (animate) { if (changed) window.scrollTo(0, 0); enter($('#view-' + view)); }
 }
 function renderView(v = state.view) {
-  if (v === 'today') { renderHero(); renderWeek(); renderBackup(); }
+  if (v === 'today') { renderStreak(); renderHero(); renderWeek(); renderBackup(); }
   if (v === 'trends') { renderTrend(); renderCategory(); renderContext(); }
   if (v === 'insights') renderPane();
   if (v === 'settings') renderSettings();
@@ -442,6 +441,132 @@ function renderWeek() {
   requestAnimationFrame(() => { sc.scrollLeft = Math.max(0, sc.scrollWidth - sc.clientWidth - weekFromEnd); update(); });
   let raf = 0; sc.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; update(); }); }, { passive: true });
   jump.addEventListener('click', () => toEnd(true));
+}
+
+/* ============ streak ============
+   A day counts if at least one reading was logged. The streak is forgiving: one missed day in any
+   7-day stretch is covered by a "shield" and does not break it. Only logging counts, never the values. */
+const MILESTONES = [3, 7, 14, 21, 30, 50, 75, 100, 150, 200, 300, 365];
+const dkAgo = i => dayKey(startOfDay(startOfDay(Date.now()) - i * DAY + DAY / 2));
+
+function computeStreak(all = state.sessions) {
+  const set = new Set(all.map(s => dayKey(s.ts)));
+  const loggedToday = set.has(dkAgo(0));
+  const out = { current: 0, best: 0, loggedToday, total: set.size, forgiven: new Set(), set, shieldReady: true, shieldIn: 0, atRisk: false };
+  if (!set.size) return out;
+  const first = Math.min(...all.map(s => s.ts));
+  const span = Math.round((startOfDay(Date.now()) - startOfDay(first)) / DAY);     // how many days ago the first reading was
+  let lastF = null, firstF = null, count = 0;
+  for (let i = loggedToday ? 0 : 1; i <= span; i++) {                                // walk back; an unlogged today is still pending
+    if (set.has(dkAgo(i))) { count++; continue; }
+    if (lastF === null || i - lastF >= 7) { out.forgiven.add(dkAgo(i)); lastF = i; if (firstF === null) firstF = i; continue; }
+    break;
+  }
+  out.current = count;
+  out.shieldReady = firstF === null || firstF >= 7;
+  out.shieldIn = firstF !== null && firstF < 7 ? 7 - firstF : 0;
+  out.atRisk = !loggedToday && count > 0 && firstF === 1;                            // yesterday was covered, so today matters
+  let run = 0, best = 0, lastMiss = -99;                                             // best run, same rule, oldest to newest
+  for (let d = span; d >= 0; d--) {
+    const idx = span - d;
+    if (set.has(dkAgo(d))) { run++; best = Math.max(best, run); }
+    else if (d === 0) { /* today still pending */ }
+    else if (idx - lastMiss >= 7) lastMiss = idx;
+    else run = 0;
+  }
+  out.best = Math.max(best, out.current);
+  return out;
+}
+const nextMilestone = n => MILESTONES.find(m => m > n) ?? n + (100 - n % 100);
+const prevMilestone = n => [...MILESTONES].reverse().find(m => m <= n) ?? 0;
+
+const FLAME = '<svg class="flame-svg" viewBox="0 0 24 24" aria-hidden="true"><path class="f1" d="M12 2.5c.7 3.8 5 5.6 5 10.2a5 5 0 0 1-10 0c0-1.7.8-3 1.8-4 .3 1.4 1 2.2 2 2.4-.4-3-.1-6.2 1.2-8.6z"/><path class="f2" d="M12 21a2.8 2.8 0 0 0 2.8-2.8c0-1.7-1.6-2.5-2.2-4-1.4 1.1-3.4 2.3-3.4 4A2.8 2.8 0 0 0 12 21z"/></svg>';
+const SHIELD = '<svg class="i" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/></svg>';
+
+function streakMessage(st) {
+  if (!st.total) return 'Log your first reading to start a streak.';
+  if (st.current === 0) return st.best > 1 ? `Fresh start. Your best run was ${st.best} days, and you can beat it.` : 'Log a reading to start a new streak.';
+  if (st.loggedToday) return st.current === 1 ? 'Day one is done. Come back tomorrow.' : 'Done for today. See you tomorrow.';
+  if (st.atRisk) return 'Your shield covered yesterday. Log today to keep your streak alive.';
+  return new Date().getHours() < 17 ? 'Log a reading today to keep it going.' : 'Still time tonight. Log a reading to keep your streak.';
+}
+
+function renderStreak() {
+  const el = $('#streakCard'), st = computeStreak();
+  const flame = st.current === 0 ? 'off' : st.loggedToday ? 'lit' : 'ember';
+  const next = nextMilestone(st.current), prev = prevMilestone(st.current);
+  const pct = st.current === 0 ? 0 : Math.round((st.current - prev) / (next - prev) * 100);
+  const today = startOfDay(Date.now());
+  const dots = []; for (let i = 6; i >= 0; i--) {
+    const d = startOfDay(today - i * DAY + DAY / 2), k = dayKey(d), dt = new Date(d);
+    const cls = st.set.has(k) ? 'logged' : st.forgiven.has(k) ? 'cover' : i === 0 ? 'today' : 'miss';
+    const mark = cls === 'logged' ? '✓' : cls === 'cover' ? '' : '';
+    dots.push(`<div class="sd ${cls}" style="--i:${6 - i}"><span class="b" title="${fmtDay(d)}">${cls === 'cover' ? SHIELD : mark}</span><span class="l">${dt.toLocaleDateString(undefined, { weekday: 'narrow' })}</span></div>`);
+  }
+  const shield = st.current === 0 ? '' : st.shieldReady
+    ? `<span class="shield ready" title="Miss one day in a week and your streak survives">${SHIELD}Shield ready</span>`
+    : `<span class="shield used" title="Your shield covered a missed day. It recharges in ${st.shieldIn} day${st.shieldIn === 1 ? '' : 's'}.">${SHIELD}Recharging · ${st.shieldIn}d</span>`;
+  el.innerHTML = `
+    <div class="streak-top">
+      <div class="flame ${flame}">${FLAME}</div>
+      <div class="streak-main">
+        <div class="streak-num"><span class="n num" data-cu="streak" data-to="${st.current}">${st.current}</span><span class="l">day streak</span></div>
+        <p class="streak-msg">${streakMessage(st)}</p>
+      </div>
+    </div>
+    <div class="sweek" role="img" aria-label="Last 7 days. ${st.set.size ? 'Days with a reading are checked.' : ''}">${dots.join('')}</div>
+    <div class="streak-foot">
+      <div class="mile">
+        <div class="mbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="Progress to the next streak goal"><i style="width:${pct}%"></i></div>
+        <span class="mtxt">${st.current === 0 ? `First goal: ${next} days` : `${next - st.current} day${next - st.current === 1 ? '' : 's'} to ${next}`}</span>
+      </div>
+      <div class="sbadges">${shield}${st.best > 0 ? `<span class="best">Best ${st.best}</span>` : ''}</div>
+    </div>
+    ${st.loggedToday ? '' : '<button class="btn primary block streak-cta" data-act="log" type="button">Log today\'s reading</button>'}
+    <p class="fine streak-note">Streaks count the days you measured, whatever the numbers were.</p>`;
+  runCounts(el);
+}
+
+/* Milestone celebration: a short, tasteful moment. */
+function celebrate(n) {
+  const el = $('#celebrate');
+  const lines = { 3: 'Three days in a row. A habit is forming.', 7: 'A full week. That is what makes a real baseline.', 14: 'Two weeks of readings. Your baseline is getting reliable.', 21: 'Three weeks. This is a habit now.', 30: 'A whole month of showing up for your health.' };
+  $('#celTitle').textContent = `${n}-day streak`;
+  $('#celText').textContent = lines[n] || `${n} days of looking after yourself. Keep it going.`;
+  $('#celFlame').innerHTML = FLAME;
+  const burst = $('#celBurst'); burst.innerHTML = '';
+  if (!RM()) for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2, r = 90 + Math.random() * 70;
+    const s = document.createElement('i');
+    s.style.cssText = `--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px;--c:${['var(--flame)', 'var(--flame-2)', 'var(--s1)', 'var(--s3)'][i % 4]};--d:${Math.random() * 120}ms`;
+    burst.appendChild(s);
+  }
+  el.hidden = false; el.classList.remove('out');
+  $('#celClose').focus();
+  if (navigator.vibrate) navigator.vibrate([12, 40, 12]);
+}
+function closeCelebrate() {
+  const el = $('#celebrate'); if (el.hidden) return;
+  if (RM()) { el.hidden = true; return; }
+  el.classList.add('out'); setTimeout(() => { el.hidden = true; el.classList.remove('out'); }, 260);
+}
+
+/* Daily reminder as a repeating calendar event (works offline, no server or push needed). */
+function downloadReminder() {
+  const time = $('#remTime').value || '20:00', [hh, mm] = time.split(':');
+  writeMeta({ remTime: time });
+  const now = new Date(), start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +hh, +mm);
+  if (start <= now) start.setDate(start.getDate() + 1);
+  const p = n => String(n).padStart(2, '0');
+  const local = d => `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
+  const stamp = `${now.getUTCFullYear()}${p(now.getUTCMonth() + 1)}${p(now.getUTCDate())}T${p(now.getUTCHours())}${p(now.getUTCMinutes())}${p(now.getUTCSeconds())}Z`;
+  const url = location.origin + location.pathname;
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Baseline//Blood Pressure//EN', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT',
+    `UID:baseline-reminder-${uid()}@baseline`, `DTSTAMP:${stamp}`, `DTSTART:${local(start)}`, 'DURATION:PT10M', 'RRULE:FREQ=DAILY',
+    'SUMMARY:Take your blood pressure reading', `DESCRIPTION:Log it in Baseline: ${url}`, `URL:${url}`,
+    'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Time for your reading', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  download('baseline-daily-reminder.ics', ics, 'text/calendar');
+  toast('Reminder downloaded. Open it to save it to your calendar.');
 }
 
 /* ============ charts ============ */
@@ -684,6 +809,7 @@ function renderSettings() {
   $('#exportJson').hidden = $('#exportCsv').hidden = !has;
   const mode = store.get(THEME_KEY) || 'auto';
   $$('#themeSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeSet === mode)));
+  $('#remTime').value = readMeta().remTime || '20:00';
   $('#aiRowSub').textContent = AI.statusText();
   $('#aiRow .row-t').textContent = AI.connected() ? 'Claude AI' : 'Connect Claude';
   updateInstallUI();
@@ -802,11 +928,16 @@ function submitForm(e) {
     arm: form.arm, pos: form.pos, tags: [...form.tags], note: $('#fNote').value.trim(),
   };
   if (prev && prev.sample) s.sample = true;
+  const before = computeStreak();
   state.sessions = state.sessions.filter(x => x.id !== s.id).concat(s).sort((a, b) => a.ts - b.ts);
   save(); closeSheet($('#logDialog'));
   state.animChart = false; renderAll();
-  toast(prev ? 'Reading updated' : `Saved ${s.sys}/${s.dia} · ${CATS[classify(s.sys, s.dia)].label}`);
-  if (classify(s.sys, s.dia) === 'crisis') { go('today'); }
+  const after = computeStreak(), grew = !prev && after.current > before.current;
+  const hit = grew && MILESTONES.includes(after.current);
+  const catLabel = CATS[classify(s.sys, s.dia)].label;
+  toast(prev ? 'Reading updated' : grew && !hit ? `Saved ${s.sys}/${s.dia} · ${after.current}-day streak` : `Saved ${s.sys}/${s.dia} · ${catLabel}`);
+  if (classify(s.sys, s.dia) === 'crisis') go('today');
+  if (hit) setTimeout(() => celebrate(after.current), 650);
 }
 
 /* ============ data tools ============ */
@@ -922,6 +1053,11 @@ function wire() {
   $('#backupNow').addEventListener('click', exportJson);
   $('#backupLater').addEventListener('click', () => { writeMeta({ dismissUntil: Date.now() + 14 * DAY }); renderBackup(); });
   $('#aiRow').addEventListener('click', () => AI.openSetup());
+  $('#celClose').addEventListener('click', closeCelebrate);
+  $('#celebrate').addEventListener('click', e => { if (e.target.id === 'celebrate') closeCelebrate(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCelebrate(); });
+  $('#remBtn').addEventListener('click', downloadReminder);
+  $('#remTime').addEventListener('change', e => writeMeta({ remTime: e.target.value }));
   $('#installBtn').addEventListener('click', async () => {
     if (!deferredInstall) return;
     deferredInstall.prompt(); try { await deferredInstall.userChoice; } catch (e) {}

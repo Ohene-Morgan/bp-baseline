@@ -415,6 +415,64 @@ input:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--acce
 .pill-btn[disabled] { opacity: .4; color: var(--muted); pointer-events: none; }
 .pill-sep { width: 1px; height: 22px; background: var(--line); }
 
+/* ---------- streak ---------- */
+:root { --flame: #f26a1b; --flame-2: #ffb43d; }
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) { --flame: #ff7f32; --flame-2: #ffc15a; } }
+:root[data-theme="dark"] { --flame: #ff7f32; --flame-2: #ffc15a; }
+
+.streak { display: grid; gap: 16px; }
+.streak-top { display: flex; align-items: center; gap: 14px; }
+.streak-main { min-width: 0; }
+.flame { width: 84px; height: 84px; flex: none; display: grid; place-items: center; }
+.flame.big { width: 112px; height: 112px; margin: 0 auto; }
+.flame-svg { width: 100%; height: 100%; overflow: visible; transform-origin: 50% 90%; }
+.flame .f1 { fill: var(--fill-2); transition: fill .5s; }
+.flame .f2 { fill: var(--card); transition: fill .5s; }
+.flame.lit .f1 { fill: var(--flame); }
+.flame.lit .f2 { fill: var(--flame-2); }
+.flame.lit .flame-svg { animation: flicker 2.8s ease-in-out infinite; filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--flame) 42%, transparent)); }
+.flame.ember .f1 { fill: color-mix(in srgb, var(--flame) 34%, var(--fill-2)); }
+.flame.ember .f2 { fill: color-mix(in srgb, var(--flame-2) 40%, var(--fill-2)); }
+.flame.ember .flame-svg { animation: ember 2.4s ease-in-out infinite; }
+.streak-num { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.streak-num .n { font-size: 3.6rem; font-weight: 750; letter-spacing: -.05em; line-height: 1; }
+.streak-num .l { font-size: 1.05rem; font-weight: 650; color: var(--ink-2); }
+.streak-msg { color: var(--ink-2); font-size: .95rem; margin-top: 4px; }
+
+.sweek { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.sd { display: grid; justify-items: center; gap: 6px; }
+.sd .b { width: 100%; max-width: 44px; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: .95rem; box-shadow: inset 0 0 0 2px var(--fill-2); color: var(--muted); }
+.sd .l { font-size: .72rem; font-weight: 600; color: var(--muted); }
+.sd.logged .b { background: var(--flame); color: #fff; box-shadow: none; animation: pop .5s var(--spring) both; animation-delay: calc(var(--i) * 60ms); }
+.sd.cover .b { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent); }
+.sd.today .b { box-shadow: inset 0 0 0 2.5px var(--flame); animation: ring 2.2s ease-in-out infinite; }
+.streak-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }
+.mile { flex: 1; min-width: 190px; display: grid; gap: 6px; }
+.mbar { height: 8px; border-radius: 99px; background: var(--fill); overflow: hidden; }
+.mbar i { display: block; height: 100%; background: var(--flame); border-radius: 99px; transform-origin: left; animation: grow .9s var(--ease) both; }
+.mtxt { font-size: .82rem; color: var(--muted); font-weight: 600; }
+.sbadges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.shield, .best { display: inline-flex; align-items: center; gap: 5px; font-size: .78rem; font-weight: 650; padding: 4px 10px; border-radius: 999px; background: var(--fill); color: var(--ink-2); white-space: nowrap; }
+.shield.ready { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.shield .i { stroke-width: 2; }
+.streak-note { text-align: center; }
+
+.celebrate { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, .45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: fadeIn .25s ease both; }
+.celebrate.out { animation: fadeOut .26s ease both; }
+.cel-card { position: relative; background: var(--card); border-radius: 28px; padding: 30px 24px 22px; width: min(360px, 100%); text-align: center; animation: celIn .55s var(--spring) both; }
+.celebrate.out .cel-card { animation: sheetOutDesk .25s ease-in both; }
+.cel-card h2 { font-size: 1.85rem; font-weight: 750; letter-spacing: -.035em; margin: 12px 0 6px; }
+.cel-card p { color: var(--ink-2); margin-bottom: 22px; }
+.cel-card .flame.big { animation: pop .7s var(--spring) both; }
+.cel-burst { position: absolute; left: 50%; top: 86px; width: 0; height: 0; pointer-events: none; }
+.cel-burst i { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: var(--c); left: -4px; top: -4px; opacity: 0; animation: burst .95s var(--ease) var(--d) both; }
+.time-in { font: inherit; color: var(--ink); background: var(--fill); border: 0; border-radius: 10px; padding: 8px 12px; min-height: 40px; }
+@keyframes flicker { 0%, 100% { transform: scale(1) rotate(0); } 25% { transform: scale(1.04, 1.07) rotate(-1.5deg); } 50% { transform: scale(.98, 1.02) rotate(1deg); } 75% { transform: scale(1.03, 1.05) rotate(-.5deg); } }
+@keyframes ember { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
+@keyframes ring { 0%, 100% { box-shadow: inset 0 0 0 2.5px var(--flame), 0 0 0 0 color-mix(in srgb, var(--flame) 35%, transparent); } 50% { box-shadow: inset 0 0 0 2.5px var(--flame), 0 0 0 7px transparent; } }
+@keyframes burst { 0% { opacity: 1; transform: translate(0, 0) scale(.4); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); } }
+@keyframes celIn { from { opacity: 0; transform: translateY(26px) scale(.9); } to { opacity: 1; transform: none; } }
+
 /* ---------- motion ---------- */
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
