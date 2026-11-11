@@ -91,7 +91,8 @@ body.scrolled .nav-title { opacity: 1; transform: translate(-50%, 0); }
 .text-btn.bold { font-weight: 650; text-align: right; }
 .head-spacer { min-width: 64px; }
 
-main { padding-top: 4px; padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 28px); display: grid; gap: 14px; }
+#main { padding-top: 4px; padding-bottom: calc(var(--tabbar-h, 92px) + 28px); display: grid; gap: 14px; }
+[hidden] { display: none !important; }
 .view { display: grid; gap: 14px; align-content: start; }
 .view[hidden] { display: none; }
 .vhead { padding: 8px 4px 4px; }
@@ -158,7 +159,10 @@ h2.t { font-size: 1.2rem; font-weight: 700; letter-spacing: -.02em; }
 
 /* ---------- week strip ---------- */
 .week-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; margin-bottom: 14px; }
-.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.week-scroll { overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; margin: 0 -4px; padding: 0 4px; border-radius: 14px; }
+.week-scroll::-webkit-scrollbar { display: none; }
+.week { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 36px) / 6.5); gap: 6px; }
+.week .day { scroll-snap-align: end; }
 .day { text-align: center; padding: 10px 0 12px; border-radius: 14px; background: var(--fill); }
 .day.today { background: color-mix(in srgb, var(--accent) 14%, var(--card)); box-shadow: inset 0 0 0 1.5px var(--accent); }
 .day .dn { font-size: .7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
@@ -299,7 +303,7 @@ button.row:active { background: var(--fill); }
 .suggest { display: flex; gap: 8px; flex-wrap: wrap; }
 .suggest button { border: 0; background: var(--card); padding: 9px 14px; border-radius: 999px; font-size: .88rem; font-weight: 550; transition: transform .18s var(--spring); }
 .suggest button:active { transform: scale(.96); }
-.composer { position: sticky; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 10px); display: flex; gap: 8px; align-items: flex-end; background: var(--bar); backdrop-filter: saturate(1.8) blur(20px); -webkit-backdrop-filter: saturate(1.8) blur(20px); padding: 8px; border-radius: 26px; box-shadow: 0 0 0 .5px var(--line), 0 8px 24px rgba(0, 0, 0, .08); }
+.composer { position: sticky; bottom: calc(var(--tabbar-h, 92px) + 10px); display: flex; gap: 8px; align-items: flex-end; background: var(--bar); backdrop-filter: saturate(1.8) blur(20px); -webkit-backdrop-filter: saturate(1.8) blur(20px); padding: 8px; border-radius: 26px; box-shadow: 0 0 0 .5px var(--line), 0 8px 24px rgba(0, 0, 0, .08); }
 .composer textarea { flex: 1; border: 0; background: transparent; font: inherit; color: var(--ink); resize: none; padding: 9px 12px; max-height: 120px; min-height: 40px; outline: none; }
 .composer button { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; flex: none; transition: transform .18s var(--spring), opacity .2s; }
 .composer button:active { transform: scale(.92); }
@@ -374,7 +378,7 @@ input:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--acce
 .switch:checked::after { transform: translateX(20px); }
 .sheet-actions { display: grid; gap: 8px; }
 
-.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 18px); transform: translateX(-50%); background: color-mix(in srgb, var(--ink) 90%, transparent); color: var(--bg); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: .9rem; z-index: 90; max-width: calc(100vw - 32px); animation: toastIn .45s var(--spring) both; backdrop-filter: blur(10px); }
+.toast { position: fixed; left: 50%; bottom: calc(var(--tabbar-h, 92px) + 14px); transform: translateX(-50%); background: color-mix(in srgb, var(--ink) 90%, transparent); color: var(--bg); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: .9rem; z-index: 90; max-width: calc(100vw - 32px); animation: toastIn .45s var(--spring) both; backdrop-filter: blur(10px); }
 .toast[hidden] { display: none; }
 
 /* ---------- motion ---------- */
@@ -402,6 +406,7 @@ input:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--acce
 
 /* ---------- wider screens ---------- */
 @media (min-width: 820px) {
+  .week { grid-auto-columns: calc((100% - 36px) / 7); }
   .hero { grid-template-columns: 1.2fr 1fr; }
   .grid2 { grid-template-columns: 1fr 1fr; }
   .card { padding: 26px; }
@@ -412,7 +417,7 @@ input:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--acce
   .desk-nav a[aria-current="page"] { background: var(--fill); color: var(--ink); }
   .topbar .desk-log { display: inline-flex; margin-left: auto; min-height: 38px; }
   .tabbar, .nav-title { display: none; }
-  main { padding-bottom: 56px; }
+  #main { padding-bottom: 56px; }
   .composer { bottom: 20px; }
   .toast { bottom: 28px; }
   .guide { grid-template-columns: 1.1fr 1fr; gap: 32px; }

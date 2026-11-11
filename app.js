@@ -376,22 +376,48 @@ function renderBackup() {
   $('#backupBar').hidden = !due;
 }
 
+/* Daily log: a horizontally scrollable strip. Shows about a week at a time, scrolls back through history. */
+let weekFromEnd = 0;   // remembered scroll distance from the "today" end, so re-renders keep your place
 function renderWeek() {
   const el = $('#weekCard');
   const today = startOfDay(Date.now());
-  const days = []; for (let i = 6; i >= 0; i--) days.push(today - i * DAY);
+  const dayAt = i => startOfDay(today - i * DAY + DAY / 2);            // i days ago; safe across DST changes
+  let n = 7;
+  if (state.sessions.length) {
+    const first = startOfDay(state.sessions[0].ts);
+    n = Math.min(120, Math.max(7, Math.round((today - first) / DAY) + 1));
+  }
+  const days = []; for (let i = n - 1; i >= 0; i--) days.push(dayAt(i));
+  const byDay = {}; state.sessions.forEach(s => { (byDay[dayKey(s.ts)] ||= []).push(s); });
   const cells = days.map(d => {
-    const ss = state.sessions.filter(s => s.ts >= d && s.ts < d + DAY);
+    const ss = byDay[dayKey(d)] || [];
     const slot = pred => { const m = ss.filter(pred); return m.length ? (m.some(isStandard) ? 'std' : 'non') : ''; };
     const am = slot(s => new Date(s.ts).getHours() < 12), pm = slot(s => new Date(s.ts).getHours() >= 12);
     const dt = new Date(d);
     const mark = v => v === 'std' ? '✓' : v === 'non' ? '•' : '';
-    return `<div class="day ${d === today ? 'today' : ''}"><div class="dn">${dt.toLocaleDateString(undefined, { weekday: 'narrow' })}</div><div class="dd">${dt.getDate()}</div>
+    const label = dt.getDate() === 1 || d === days[0] ? dt.toLocaleDateString(undefined, { month: 'short' }) : dt.toLocaleDateString(undefined, { weekday: 'narrow' });
+    return `<div class="day ${d === today ? 'today' : ''}" aria-label="${fmtDay(d)}"><div class="dn">${label}</div><div class="dd">${dt.getDate()}</div>
       <div class="dots"><span class="dot ${am}" title="Morning">${mark(am) || 'AM'}</span><span class="dot ${pm}" title="Afternoon or evening">${mark(pm) || 'PM'}</span></div></div>`;
   }).join('');
-  el.innerHTML = `<div class="week-head"><h2 class="t">Last 7 days</h2><span class="sub" style="margin:0">Goal: a morning and an evening reading</span></div>
-    <div class="week">${cells}</div>
-    <div class="week-key"><span><i class="dot std" style="display:inline-grid"></i>Standard</span><span><i class="dot non" style="display:inline-grid"></i>Not standard</span><span><i class="dot" style="display:inline-grid"></i>Missing</span></div>`;
+  el.innerHTML = `<div class="week-head"><div><h2 class="t">Daily log</h2><p class="sub" id="weekRange" style="margin:2px 0 0"></p></div><button class="btn small" id="weekToday" type="button" hidden>Jump to today</button></div>
+    <div class="week-scroll" id="weekScroll" tabindex="0" role="group" aria-label="Daily log, scroll sideways for earlier days"><div class="week">${cells}</div></div>
+    <div class="week-key"><span><i class="dot std" style="display:inline-grid"></i>Standard</span><span><i class="dot non" style="display:inline-grid"></i>Not standard</span><span><i class="dot" style="display:inline-grid"></i>Missing</span><span>Goal: a morning and an evening reading</span></div>`;
+
+  const sc = $('#weekScroll'), rng = $('#weekRange'), jump = $('#weekToday');
+  const update = () => {
+    const cells = $$('.day', sc); if (!cells.length) return;
+    const sr = sc.getBoundingClientRect();
+    weekFromEnd = Math.max(0, sc.scrollWidth - sc.clientWidth - sc.scrollLeft);
+    let a = 0, b = cells.length - 1;
+    for (let i = 0; i < cells.length; i++) { const r = cells[i].getBoundingClientRect(); if (r.left + r.width / 2 >= sr.left) { a = i; break; } }
+    for (let i = cells.length - 1; i >= 0; i--) { const r = cells[i].getBoundingClientRect(); if (r.left + r.width / 2 <= sr.right) { b = i; break; } }
+    rng.textContent = a >= b ? fmtShort(days[a]) : `${fmtShort(days[a])} – ${fmtShort(days[b])}`;
+    jump.hidden = weekFromEnd < 8;
+  };
+  const toEnd = smooth => sc.scrollTo({ left: sc.scrollWidth, behavior: smooth && !RM() ? 'smooth' : 'auto' });
+  requestAnimationFrame(() => { sc.scrollLeft = Math.max(0, sc.scrollWidth - sc.clientWidth - weekFromEnd); update(); });
+  let raf = 0; sc.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; update(); }); }, { passive: true });
+  jump.addEventListener('click', () => toEnd(true));
 }
 
 /* ============ charts ============ */
@@ -845,6 +871,10 @@ function wire() {
   matchMedia('(display-mode: standalone)').addEventListener?.('change', updateInstallUI);
   window.addEventListener('online', () => renderPane());
   window.addEventListener('offline', () => renderPane());
+
+  // Reserve exactly as much space as the bottom tab bar really occupies (it varies with safe areas).
+  const tb = $('.tabbar'), setTab = () => document.documentElement.style.setProperty('--tabbar-h', tb.offsetHeight + 'px');
+  new ResizeObserver(setTab).observe(tb); setTab();
 
   let rt; new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => { if (state.view === 'trends' && state.tview === 'chart') renderTrend(); }, 120); }).observe($('#view-trends'));
   AI.init();
