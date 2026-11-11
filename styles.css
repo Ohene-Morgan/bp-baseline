@@ -503,8 +503,22 @@ input:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--acce
 .dt-pill input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; min-height: 0; padding: 0; }
 .field.when .quick button:active { transform: scale(.94); }
 .quick button { transition: transform .25s var(--spring), background .2s; }
-.add-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
-.add-line .link-btn { padding: 4px 0; }
+.field-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.field-note { font-size: .8rem; color: var(--muted); }
+.add-reading { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 14px; border-radius: 16px; background: color-mix(in srgb, var(--accent) 6%, transparent); border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); transition: transform .25s var(--spring), background .2s; }
+.add-reading:active { transform: scale(.98); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.ar-ic { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; flex: none; }
+.ar-ic .i { stroke-width: 2.4; }
+.ar-t { display: grid; line-height: 1.25; min-width: 0; }
+.ar-t b { font-weight: 650; font-size: .95rem; color: var(--accent); }
+.ar-t small { font-size: .78rem; color: var(--muted); }
+.kv { margin: 16px 0 0; border-top: 1px solid var(--line); }
+.kv > div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; }
+.kv > div + div { border-top: 1px solid var(--line); }
+.kv dt { color: var(--muted); font-size: .88rem; flex: none; }
+.kv dd { margin: 0; font-size: .92rem; font-weight: 550; text-align: right; }
+.tagpill.good { background: color-mix(in srgb, var(--c-normal) 14%, transparent); color: var(--ink); }
+.stat { display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-height: 78px; }
 .preview { min-height: 0; }
 .preview:empty { display: none; }
 .sheet-foot.col { flex-direction: column; align-items: stretch; gap: 4px; text-align: center; }

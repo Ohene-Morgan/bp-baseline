@@ -87,6 +87,12 @@ const dayKey = ts => toInput(ts).slice(0, 10);
 const startOfDay = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
 const fmtDay = ts => new Date(ts).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 const fmtTime = ts => new Date(ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+/* "Today at 7:05 AM", "Yesterday at 8:30 PM", "Mon, Nov 9 at 7:40 AM" */
+function whenText(ts) {
+  const diff = Math.round((startOfDay(Date.now()) - startOfDay(ts)) / DAY);
+  const day = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : fmtDay(ts);
+  return `${day} at ${fmtTime(ts)}`;
+}
 const fmtShort = ts => new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 function ago(ts) {
@@ -358,7 +364,7 @@ function renderHero() {
     bc.innerHTML = `
       <div class="card-label">${icon('heart', 16)}Baseline</div>
       <div class="big"><span class="val"><span data-cu="bs" data-to="${r(base.sys)}">${r(base.sys)}</span><span class="slash">/</span><span data-cu="bd" data-to="${r(base.dia)}">${r(base.dia)}</span></span><span class="unit">mmHg</span></div>
-      <div class="cat-line">${chip(base.cat)}<span class="num">Typical ${r(base.sys - base.sdS)}–${r(base.sys + base.sdS)} over ${r(base.dia - base.sdD)}–${r(base.dia + base.sdD)}${base.pulse ? ` · ${r(base.pulse)} bpm` : ''}</span></div>
+      <div class="cat-line">${chip(base.cat)}<span class="num">Typical range ${r(base.sys - base.sdS)}–${r(base.sys + base.sdS)} / ${r(base.dia - base.sdD)}–${r(base.dia + base.sdD)}</span></div>
       <div class="zonebar" aria-hidden="true">
         <div class="zones">${zones.map((z, i) => `<span class="cat-${z[0]}" style="flex:${z[2] - z[1]};animation-delay:${i * 70}ms"></span>`).join('')}</div>
         <div class="zone-marker" style="left:${marker(base.sys)}%"></div>
@@ -369,7 +375,7 @@ function renderHero() {
           <svg viewBox="0 0 52 52"><circle class="trk" cx="26" cy="26" r="23"/><circle class="prg" cx="26" cy="26" r="23" stroke-dasharray="${C}" data-p="${base.progress}" style="stroke-dashoffset:${C}"/></svg>
           <b>${Math.round(base.progress * 100)}%</b>
         </div>
-        <div class="conf-text"><strong>${base.level} confidence</strong>${base.n} standard readings over ${base.days} day${base.days === 1 ? '' : 's'}. ${base.progress >= 1 ? 'Enough for a reliable baseline.' : `About ${base.needN} more readings across ${base.needD || 'a few more'} day${base.needD === 1 ? '' : 's'} will firm it up.`}${base.dropped ? ' First day excluded.' : ''}</div>
+        <div class="conf-text"><strong>${base.level} confidence</strong>${base.n} rested readings over ${base.days} day${base.days === 1 ? '' : 's'}${base.progress >= 1 ? '' : `. ${base.needN > 0 ? `${base.needN} more reading${base.needN === 1 ? '' : 's'}` : `${base.needD} more day${base.needD === 1 ? '' : 's'}`} would firm it up.`}</div>
       </div>`;
   } else {
     const need = Math.max(0, 3 - base.n);
@@ -385,13 +391,17 @@ function renderHero() {
   lc.innerHTML = `
     <div class="card-label plain">Latest<span class="when">${ago(L.ts)}</span></div>
     <div class="big"><span class="val"><span data-cu="ls" data-to="${L.sys}">${L.sys}</span><span class="slash">/</span><span data-cu="ld" data-to="${L.dia}">${L.dia}</span></span><span class="unit">mmHg</span></div>
-    <div class="latest-meta">${chip(cat)}<span class="tagpill">${std ? 'Standard conditions' : 'Not standard'}</span>${tagPills(L.tags)}</div>
-    <p class="sub num" style="margin-top:10px">${fmtDay(L.ts)}, ${fmtTime(L.ts)}${L.readings && L.readings.length > 1 ? ` · average of ${L.readings.length}` : ''} · ${L.arm === 'L' ? 'left' : 'right'} arm, ${L.pos}</p>
+    <div class="latest-meta">${chip(cat)}<span class="tagpill ${std ? 'good' : ''}">${std ? 'Standard conditions' : 'Not a standard reading'}</span></div>
+    ${L.tags.length ? `<div class="latest-meta">${tagPills(L.tags)}</div>` : ''}
     <div class="stats">
       <div class="stat"><div class="k">Pulse</div><div class="v">${L.pulse ? Math.round(L.pulse) : '–'}<small>bpm</small></div></div>
       <div class="stat"><div class="k">vs baseline</div><div class="v">${delta}</div></div>
       <div class="stat"><div class="k">Pulse pressure</div><div class="v">${L.sys - L.dia}<small>mmHg</small></div></div>
-    </div>`;
+    </div>
+    <dl class="kv">
+      <div><dt>Taken</dt><dd>${whenText(L.ts)}</dd></div>
+      <div><dt>Setup</dt><dd>${L.arm === 'L' ? 'Left' : 'Right'} arm, ${L.pos}${L.readings && L.readings.length > 1 ? `, ${L.readings.length} readings averaged` : ''}</dd></div>
+    </dl>`;
   runCounts(bc); runCounts(lc); runRings(bc);
 }
 
@@ -450,7 +460,12 @@ function renderWeek() {
     jump.hidden = weekFromEnd < 8;
   };
   const toEnd = smooth => sc.scrollTo({ left: sc.scrollWidth, behavior: smooth && !RM() ? 'smooth' : 'auto' });
-  requestAnimationFrame(() => { sc.scrollLeft = Math.max(0, sc.scrollWidth - sc.clientWidth - weekFromEnd); update(); });
+  // Rest on today (or on the spot she was last at). Layout can still be settling on first paint, so re-apply until she touches it.
+  const fromEnd = weekFromEnd; let touched = false;
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => sc.addEventListener(ev, () => { touched = true; }, { passive: true }));
+  const place = () => { if (touched) return; sc.scrollLeft = Math.max(0, sc.scrollWidth - sc.clientWidth - fromEnd); update(); };
+  requestAnimationFrame(place); setTimeout(place, 150); setTimeout(place, 600);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
   let raf = 0; sc.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; update(); }); }, { passive: true });
   jump.addEventListener('click', () => toEnd(true));
 }
@@ -1165,7 +1180,7 @@ function wire() {
   $('#remBtn').addEventListener('click', downloadReminder);
   $('#shareSummary').addEventListener('click', shareSummary);
   // Coming back to the app later in the day (or after midnight) should show the current streak state.
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.view === 'today') { renderTodayHead(); renderStreak(); renderWeek(); } });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.view === 'today') { weekFromEnd = 0; renderTodayHead(); renderStreak(); renderWeek(); } });
   $('#remTime').addEventListener('change', e => writeMeta({ remTime: e.target.value }));
   $('#installBtn').addEventListener('click', async () => {
     if (!deferredInstall) return;
