@@ -1,6 +1,6 @@
 {
-  "name": "Baseline — Blood Pressure Tracker",
-  "short_name": "Baseline",
+  "name": "Kayline — Blood Pressure Tracker",
+  "short_name": "Kayline",
   "description": "Log home blood pressure with context and find your true baseline. Private: data stays on your device.",
   "id": "./",
   "start_url": "./#today",

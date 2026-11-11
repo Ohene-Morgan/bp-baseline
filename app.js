@@ -1,5 +1,5 @@
 'use strict';
-/* Baseline — blood pressure tracker. No build step, no dependencies.
+/* Kayline — blood pressure tracker. No build step, no dependencies.
    All readings live in this browser's localStorage. The only network call the app can
    make is the optional Claude AI feature in ai.js, using the user's own API key. */
 
@@ -311,7 +311,7 @@ function go(view, animate = true) {
   VIEWS.forEach(v => { $('#view-' + v).hidden = v !== view; });
   $$('[data-nav]').forEach(a => a.dataset.nav === view ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   $('#navTitle').textContent = TITLES[view];
-  document.title = view === 'today' ? 'Baseline — Blood Pressure Tracker' : `${TITLES[view]} · Baseline`;
+  document.title = view === 'today' ? 'Kayline — Blood Pressure Tracker' : `${TITLES[view]} · Kayline`;
   if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
   state.animChart = animate;
   renderView(view);
@@ -350,7 +350,7 @@ function renderHero() {
     bc.innerHTML = `<div class="empty">
       <div class="card-label">${icon('heart', 16)}Baseline</div>
       <h2>Find your true blood pressure.</h2>
-      <p>One reading is a snapshot. Your <strong>baseline</strong> is what your body does when you are rested, seated and unstimulated. Log a few days of readings with what was going on, and Baseline works it out.</p>
+      <p>One reading is a snapshot. Your <strong>baseline</strong> is what your body does when you are rested, seated and unstimulated. Log a few days of readings with what was going on, and Kayline works it out.</p>
       <div class="row2"><button class="btn primary" data-act="log" type="button">Log your first reading</button><button class="btn" data-act="sample" type="button">Explore with sample data</button></div></div>`;
     lc.innerHTML = `<div class="card-label plain">Latest</div><p class="sub" style="margin-top:10px">Nothing yet. Your most recent reading and how it compares with your baseline will show up here.</p>`;
     return;
@@ -574,7 +574,7 @@ function buildSummaryText() {
   if (fx.length) lines.push('', 'What moved the numbers: ' + fx.map(x => `${x.tag.label.toLowerCase()} ${signed(x.ds)}/${signed(x.dd)}`).join(', '));
   const st = computeStreak();
   if (st.current > 1) lines.push('', `Logging streak: ${st.current} days`);
-  lines.push('', 'Home readings only. Not a diagnosis. Made with Baseline.');
+  lines.push('', 'Home readings only. Not a diagnosis. Made with Kayline.');
   return lines.join('\n');
 }
 async function shareSummary() {
@@ -618,11 +618,11 @@ function downloadReminder() {
   const local = d => `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
   const stamp = `${now.getUTCFullYear()}${p(now.getUTCMonth() + 1)}${p(now.getUTCDate())}T${p(now.getUTCHours())}${p(now.getUTCMinutes())}${p(now.getUTCSeconds())}Z`;
   const url = location.origin + location.pathname;
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Baseline//Blood Pressure//EN', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT',
-    `UID:baseline-reminder-${uid()}@baseline`, `DTSTAMP:${stamp}`, `DTSTART:${local(start)}`, 'DURATION:PT10M', 'RRULE:FREQ=DAILY',
-    'SUMMARY:Take your blood pressure reading', `DESCRIPTION:Log it in Baseline: ${url}`, `URL:${url}`,
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Kayline//Blood Pressure//EN', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT',
+    `UID:kayline-reminder-${uid()}@kayline`, `DTSTAMP:${stamp}`, `DTSTART:${local(start)}`, 'DURATION:PT10M', 'RRULE:FREQ=DAILY',
+    'SUMMARY:Take your blood pressure reading', `DESCRIPTION:Log it in Kayline: ${url}`, `URL:${url}`,
     'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Time for your reading', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-  download('baseline-daily-reminder.ics', ics, 'text/calendar');
+  download('kayline-daily-reminder.ics', ics, 'text/calendar');
   toast('Reminder downloaded. Open it to save it to your calendar.');
 }
 
@@ -1070,14 +1070,14 @@ function download(name, text, type) {
 }
 function exportJson() {
   const mine = state.sessions.filter(s => !s.sample);
-  download(`baseline-backup-${dayKey(Date.now())}.json`, JSON.stringify({ app: 'baseline-bp', version: 1, exportedAt: new Date().toISOString(), sessions: mine }, null, 2), 'application/json');
+  download(`kayline-backup-${dayKey(Date.now())}.json`, JSON.stringify({ app: 'baseline-bp', version: 1, exportedAt: new Date().toISOString(), sessions: mine }, null, 2), 'application/json');
   writeMeta({ lastExport: Date.now() }); renderBackup(); toast('Backup exported');
 }
 function exportCsv() {
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const head = ['datetime', 'systolic', 'diastolic', 'pulse', 'readings_averaged', 'arm', 'position', 'category', 'standard_conditions', 'context', 'note'];
   const lines = state.sessions.filter(s => !s.sample).map(s => [toInput(s.ts).replace('T', ' '), s.sys, s.dia, s.pulse ?? '', (s.readings || []).length || 1, s.arm, s.pos, CATS[classify(s.sys, s.dia)].label, isStandard(s) ? 'yes' : 'no', s.tags.map(t => TAG[t]?.label || t).join('; '), s.note].map(q).join(','));
-  download(`baseline-readings-${dayKey(Date.now())}.csv`, [head.join(','), ...lines].join('\n'), 'text/csv');
+  download(`kayline-readings-${dayKey(Date.now())}.csv`, [head.join(','), ...lines].join('\n'), 'text/csv');
   writeMeta({ lastExport: Date.now() }); renderBackup(); toast('CSV exported');
 }
 function importJson(file) {
@@ -1092,7 +1092,7 @@ function importJson(file) {
       const fresh = good.filter(s => !have.has(s.id));
       state.sessions = state.sessions.concat(fresh).sort((a, b) => a.ts - b.ts);
       save(); renderAll(); toast(`Imported ${fresh.length} new reading${fresh.length === 1 ? '' : 's'}${good.length - fresh.length ? ` (${good.length - fresh.length} already here)` : ''}`);
-    } catch (e) { toast('That file does not look like a Baseline backup.'); }
+    } catch (e) { toast('That file does not look like a Kayline backup.'); }
   };
   rd.readAsText(file);
 }
@@ -1202,7 +1202,7 @@ function wire() {
   });
 
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; updateInstallUI(); });
-  window.addEventListener('appinstalled', () => { deferredInstall = null; updateInstallUI(); toast('Baseline installed'); });
+  window.addEventListener('appinstalled', () => { deferredInstall = null; updateInstallUI(); toast('Kayline installed'); });
   window.addEventListener('hashchange', () => {
     if (location.hash === '#log') { history.replaceState(null, '', '#' + state.view); openLog(); return; }
     const v = viewFromHash(); if (v && v !== state.view) go(v);

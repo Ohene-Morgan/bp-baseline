@@ -155,7 +155,7 @@ const AI = (() => {
     return out;
   }
 
-  const SYS_BASE = `You are the assistant inside Baseline, a home blood pressure log. You help one person understand their own readings. You are not a clinician.
+  const SYS_BASE = `You are the assistant inside Kayline, a home blood pressure log. You help one person understand their own readings. You are not a clinician.
 
 Rules:
 - Use only the numbers in the DATA block. Never invent readings, dates or statistics. If the data is thin (few readings or few days), say so plainly.
@@ -222,7 +222,7 @@ Task: chat. Answer concisely, usually under 150 words, grounded in the DATA bloc
       if (t.dataset.d) { rep.days = Number(t.dataset.d); renderReport(el); }
       if (t.id === 'repGo') generateReport(el);
       if (t.id === 'repCopy') copyText(rep.text);
-      if (t.id === 'repShare') navigator.share({ title: 'Baseline report', text: rep.text }).catch(() => {});
+      if (t.id === 'repShare') navigator.share({ title: 'Kayline report', text: rep.text }).catch(() => {});
       if (t.id === 'repDel') { clearReport(); renderReport(el); }
     };
   }

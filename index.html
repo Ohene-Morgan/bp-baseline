@@ -3,23 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Baseline — Blood Pressure Tracker</title>
+<title>Kayline — Blood Pressure Tracker</title>
 <meta name="description" content="Log your home blood pressure with context, find your true baseline, and see what moves your numbers. Private by design: your data stays on your device.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" id="tcLight" media="(prefers-color-scheme: light)" content="#f2f2f7">
 <meta name="theme-color" id="tcDark" media="(prefers-color-scheme: dark)" content="#000000">
-<meta name="application-name" content="Baseline">
+<meta name="application-name" content="Kayline">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Baseline">
+<meta name="apple-mobile-web-app-title" content="Kayline">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta property="og:title" content="Baseline — find your true blood pressure">
+<meta property="og:title" content="Kayline — find your true blood pressure">
 <meta property="og:description" content="A private, beautiful blood pressure tracker. Log readings with context, see your baseline, trends and insights.">
 <meta property="og:type" content="website">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=12">
+<link rel="stylesheet" href="styles.css?v=13">
 <script>
   // Apply the saved theme before first paint to avoid a flash.
   try { var t = localStorage.getItem('bp-baseline:theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -29,9 +29,9 @@
 
 <header class="topbar" id="topbar">
   <div class="wrap topbar-in">
-    <a class="brand" href="#today" aria-label="Baseline">
+    <a class="brand" href="#today" aria-label="Kayline">
       <img src="icons/icon-192.png" width="28" height="28" alt="" class="brand-mark">
-      <span>Baseline</span>
+      <span>Kayline</span>
     </a>
     <div class="nav-title" id="navTitle" aria-hidden="true">Today</div>
     <nav class="desk-nav" aria-label="Sections">
@@ -145,7 +145,7 @@
     <div id="installGroup" hidden>
       <h2 class="group-title">App</h2>
       <div class="group">
-        <button class="row" id="installBtn" type="button" hidden><span class="row-main"><span class="row-t">Install Baseline</span><span class="row-s">Add it to your home screen or dock. Works offline.</span></span><svg class="i chev" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="row" id="installBtn" type="button" hidden><span class="row-main"><span class="row-t">Install Kayline</span><span class="row-s">Add it to your home screen or dock. Works offline.</span></span><svg class="i chev" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <div class="row static" id="iosHint" hidden><span class="row-main"><span class="row-t">Install on iPhone or iPad</span><span class="row-s">Tap the Share button in Safari, then “Add to Home Screen”.</span></span></div>
       </div>
     </div>
@@ -165,7 +165,7 @@
     <article class="card guide">
       <ol class="steps">
         <li><strong>Measure the same way each time.</strong> Sit with your back supported, feet flat, arm at heart level, after 5 quiet minutes. Skip caffeine, exercise and smoking for 30 minutes.</li>
-        <li><strong>Take 2 or 3 readings a minute apart.</strong> Baseline averages them into one session.</li>
+        <li><strong>Take 2 or 3 readings a minute apart.</strong> Kayline averages them into one session.</li>
         <li><strong>Measure morning and evening for about a week.</strong> Home-monitoring guidance suggests this and drops the first day.</li>
         <li><strong>Tag what is going on.</strong> Only seated readings with no coffee, exercise, meal, stress, alcohol, nicotine, full bladder or illness count toward your baseline. Everything else is compared against it.</li>
       </ol>
@@ -177,7 +177,7 @@
       <p class="fine">Categories follow the AHA/ACC guideline, unchanged in the 2025 update. A diagnosis needs averaged readings on more than one occasion. Source: <a href="https://www.ahajournals.org/doi/10.1161/HYP.0000000000000249" target="_blank" rel="noopener">2025 AHA/ACC High Blood Pressure Guideline</a>. “Low” (under 90/60) is an informal flag, not a guideline category.</p>
     </article>
 
-    <p class="disclaimer"><strong>Not medical advice.</strong> Baseline is not a medical device and does not diagnose anything. Home readings vary with the cuff, the day and your technique. Talk to a doctor or pharmacist about your numbers, and use a validated upper-arm monitor. If you have chest pain, trouble breathing, weakness, vision changes or trouble speaking, call emergency services.</p>
+    <p class="disclaimer"><strong>Not medical advice.</strong> Kayline is not a medical device and does not diagnose anything. Home readings vary with the cuff, the day and your technique. Talk to a doctor or pharmacist about your numbers, and use a validated upper-arm monitor. If you have chest pain, trouble breathing, weakness, vision changes or trouble speaking, call emergency services.</p>
   </section>
 </main>
 
@@ -245,7 +245,7 @@
 <dialog id="nameDialog" aria-labelledby="nameTitle">
   <form id="nameForm" method="dialog" novalidate>
     <div class="grab" aria-hidden="true"></div>
-    <div class="sheet-head center"><h2 id="nameTitle">Welcome to Baseline</h2></div>
+    <div class="sheet-head center"><h2 id="nameTitle">Welcome to Kayline</h2></div>
     <div class="sheet-body">
       <p class="lead">A calm place to keep track of your blood pressure. What should we call you? It stays on this device.</p>
       <input type="text" id="nameIn" maxlength="30" placeholder="Your name" autocomplete="given-name" aria-label="Your name">
@@ -271,7 +271,7 @@
 
       <div class="notice">
         <strong>What leaves your device</strong>
-        <p>When you generate a report or send a chat message, Baseline sends a summary of your readings straight from this browser to Anthropic (api.anthropic.com): dates, numbers, arm, position and the context tags you picked. It never sends your name or email, and notes are left out unless you turn them on below. Baseline has no server, so nobody else sees it.</p>
+        <p>When you generate a report or send a chat message, Kayline sends a summary of your readings straight from this browser to Anthropic (api.anthropic.com): dates, numbers, arm, position and the context tags you picked. It never sends your name or email, and notes are left out unless you turn them on below. Kayline has no server, so nobody else sees it.</p>
       </div>
 
       <div class="field" id="aiKeyField">
@@ -313,7 +313,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <div class="tip" id="tip" hidden></div>
 
-<script src="ai.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="ai.js?v=13"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>

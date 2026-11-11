@@ -1,4 +1,4 @@
-# Baseline — blood pressure tracker
+# Kayline — blood pressure tracker
 
 A private, no-account blood pressure tracker that works out your **true baseline**. Installable as an app (PWA) and works offline.
 
@@ -12,7 +12,7 @@ A private, no-account blood pressure tracker that works out your **true baseline
 Plain HTML, CSS and JavaScript. No build step, no dependencies.
 
 ## Privacy and the AI feature
-The AI feature is off until you add a key in Settings and accept a disclosure. When you tap Generate or Send, a summary of your readings (dates, numbers, arm, position, context tags; notes only if you opt in) is sent from your browser directly to `api.anthropic.com` with your key. There is no Baseline server. The key is stored in your browser (or kept for the session if you turn off "Remember key"). Use a key with a low spend limit.
+The AI feature is off until you add a key in Settings and accept a disclosure. When you tap Generate or Send, a summary of your readings (dates, numbers, arm, position, context tags; notes only if you opt in) is sent from your browser directly to `api.anthropic.com` with your key. There is no Kayline server. The key is stored in your browser (or kept for the session if you turn off "Remember key"). Use a key with a low spend limit.
 
 ## Run locally
 Serve the folder (a service worker needs http): `python -m http.server`, then open http://localhost:8000.
