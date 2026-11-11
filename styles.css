@@ -192,6 +192,20 @@ h2.t { font-size: 1.2rem; font-weight: 700; letter-spacing: -.02em; }
 @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .seg .thumb { background: linear-gradient(180deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .12)); box-shadow: 0 1px 3px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .3), 0 0 0 .5px rgba(255, 255, 255, .08); } }
 .seg.wide { display: flex; } .seg.wide button { flex: 1; min-height: 40px; }
 
+/* Arm / Position: a fully rounded track with a translucent blue glass thumb that stretches as it slides. */
+.seg.wide.glass { border-radius: 999px; padding: 4px; gap: 0; background: var(--fill); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .08); }
+.seg.wide.glass button { border-radius: 999px; min-height: 44px; font-size: .95rem; }
+.seg.wide.glass button[aria-pressed="true"] { color: #fff; text-shadow: 0 1px 1px rgba(0, 20, 60, .28); }
+.seg.glass .thumb { border-radius: 999px; overflow: hidden; transition: opacity .2s;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 72%, #7db8ff), color-mix(in srgb, var(--accent) 94%, #0a3a8a));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), inset 0 -1px 0 rgba(255, 255, 255, .14), inset 0 0 14px rgba(255, 255, 255, .14), 0 0 0 .5px color-mix(in srgb, var(--accent) 70%, #000), 0 8px 18px color-mix(in srgb, var(--accent) 38%, transparent);
+  backdrop-filter: blur(10px) saturate(1.8); -webkit-backdrop-filter: blur(10px) saturate(1.8); }
+.seg.glass .thumb::after { content: ""; position: absolute; left: 4px; right: 4px; top: 2px; height: 46%; border-radius: 999px; background: linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0)); pointer-events: none; }
+.seg.glass .thumb::before { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .55) 50%, transparent 70%); transform: translateX(-130%); pointer-events: none; }
+.seg.glass .thumb.shine::before { animation: sheen .85s ease .08s forwards; }
+:root[data-theme="dark"] .seg.glass .thumb { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 70%, #9cc8ff), color-mix(in srgb, var(--accent) 92%, #06265e)); }
+.rrow .cell span em { font-style: normal; font-weight: 500; opacity: .7; }
+
 /* ---------- charts ---------- */
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .82rem; color: var(--ink-2); margin-bottom: 8px; }
 .legend span { display: inline-flex; align-items: center; gap: 7px; }

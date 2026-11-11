@@ -903,9 +903,9 @@ let form = { arm: 'L', pos: 'seated', tags: new Set() };
 
 function rowHTML(i) {
   return `<div class="rrow" data-i="${i}">
-    <label class="cell"><span>Systolic</span><input type="number" inputmode="numeric" min="60" max="260" placeholder="120" data-f="sys" aria-label="Systolic, reading ${i + 1}"></label>
-    <label class="cell"><span>Diastolic</span><input type="number" inputmode="numeric" min="30" max="160" placeholder="80" data-f="dia" aria-label="Diastolic, reading ${i + 1}"></label>
-    <label class="cell"><span>Pulse</span><input type="number" inputmode="numeric" min="30" max="220" placeholder="65" data-f="pulse" aria-label="Pulse, reading ${i + 1}"></label>
+    <label class="cell"><span>Systolic <em>mmHg</em></span><input type="number" inputmode="numeric" min="60" max="260" placeholder="120" data-f="sys" aria-label="Systolic, reading ${i + 1}"></label>
+    <label class="cell"><span>Diastolic <em>mmHg</em></span><input type="number" inputmode="numeric" min="30" max="160" placeholder="80" data-f="dia" aria-label="Diastolic, reading ${i + 1}"></label>
+    <label class="cell"><span>Pulse <em>bpm</em></span><input type="number" inputmode="numeric" min="30" max="220" placeholder="65" data-f="pulse" aria-label="Pulse, reading ${i + 1}"></label>
     <button type="button" class="rm" aria-label="Remove reading ${i + 1}" ${i === 0 ? 'hidden' : ''}>×</button></div>`;
 }
 function readRows() {
@@ -986,8 +986,21 @@ function layoutSeg(seg) {
   if (fresh) { t = document.createElement('i'); t.className = 'thumb'; t.setAttribute('aria-hidden', 'true'); t.style.transition = 'none'; seg.prepend(t); }
   const on = seg.querySelector('button[aria-pressed="true"]');
   if (!on || !seg.offsetWidth) { t.style.opacity = '0'; return; }
-  t.style.opacity = '1'; t.style.width = on.offsetWidth + 'px'; t.style.height = on.offsetHeight + 'px';
-  t.style.transform = `translate(${on.offsetLeft}px, ${on.offsetTop}px)`;
+  const nl = on.offsetLeft, nw = on.offsetWidth, nt = on.offsetTop;
+  // Liquid glass: on a tap, the thumb stretches across to the new option, then settles (Web Animations, no libraries).
+  if (seg.classList.contains('glass') && seg._anim && !fresh && !RM() && t.dataset.l !== undefined && (Number(t.dataset.l) !== nl || Number(t.dataset.w) !== nw)) {
+    const ol = Number(t.dataset.l), ow = Number(t.dataset.w), left = Math.min(ol, nl), span = Math.max(ol + ow, nl + nw) - left;
+    t.animate([
+      { transform: `translate(${ol}px, ${nt}px) scale(1, 1)`, width: ow + 'px', offset: 0 },
+      { transform: `translate(${left}px, ${nt}px) scale(1, .9)`, width: span + 'px', offset: .42 },
+      { transform: `translate(${nl}px, ${nt}px) scale(1, 1)`, width: nw + 'px', offset: 1 },
+    ], { duration: 560, easing: 'cubic-bezier(.32,.72,0,1)' });
+    t.classList.remove('shine'); void t.offsetWidth; t.classList.add('shine');
+  }
+  seg._anim = false;
+  t.dataset.l = nl; t.dataset.w = nw;
+  t.style.opacity = '1'; t.style.width = nw + 'px'; t.style.height = on.offsetHeight + 'px';
+  t.style.transform = `translate(${nl}px, ${nt}px)`;
   if (fresh) requestAnimationFrame(() => { t.style.transition = ''; });
 }
 function refreshSegs() { $$('.seg').forEach(layoutSeg); }
@@ -1134,8 +1147,8 @@ function wire() {
   nameDlg.addEventListener('close', () => { writeMeta({ nameAsked: true }); renderTodayHead(); });
   $('#nameForm').addEventListener('submit', e => { e.preventDefault(); const n = $('#nameIn').value.trim(); if (n) writeMeta({ name: n }); closeSheet(nameDlg); renderTodayHead(); });
   $('#setName').addEventListener('input', e => { writeMeta({ name: e.target.value.trim() }); renderTodayHead(); });
-  $('#armSeg').addEventListener('click', e => { if (e.target.dataset.v) { form.arm = e.target.dataset.v; syncFormUI(); } });
-  $('#posSeg').addEventListener('click', e => { if (e.target.dataset.v) { form.pos = e.target.dataset.v; syncFormUI(); } });
+  $('#armSeg').addEventListener('click', e => { if (e.target.dataset.v) { $('#armSeg')._anim = true; form.arm = e.target.dataset.v; syncFormUI(); if (navigator.vibrate) navigator.vibrate(6); } });
+  $('#posSeg').addEventListener('click', e => { if (e.target.dataset.v) { $('#posSeg')._anim = true; form.pos = e.target.dataset.v; syncFormUI(); if (navigator.vibrate) navigator.vibrate(6); } });
   $('#tagChips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const t = b.dataset.t; form.tags.has(t) ? form.tags.delete(t) : form.tags.add(t); syncFormUI(); if (navigator.vibrate) navigator.vibrate(6); });
 
   $('#rangeSeg').addEventListener('click', e => { if (e.target.dataset.period) { state.period = e.target.dataset.period; state.anchor = Date.now(); state.tableLimit = 15; state.animChart = true; renderTrend(); renderCategory(); renderContext(); } });

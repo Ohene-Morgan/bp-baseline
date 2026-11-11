@@ -19,7 +19,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=11">
+<link rel="stylesheet" href="styles.css?v=12">
 <script>
   // Apply the saved theme before first paint to avoid a flash.
   try { var t = localStorage.getItem('bp-baseline:theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -210,7 +210,7 @@
         </div>
       </div>
       <div class="field">
-        <div class="field-head"><span class="label">Readings</span><span class="field-note">mmHg, from your cuff</span></div>
+        <span class="label">Readings</span>
         <div id="readingRows"></div>
         <button type="button" class="add-reading" id="addRow">
           <span class="ar-ic" aria-hidden="true"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
@@ -220,9 +220,9 @@
       </div>
       <div class="field two">
         <div><span class="label">Arm</span>
-          <div class="seg wide" id="armSeg" role="group" aria-label="Arm"><button type="button" data-v="L">Left</button><button type="button" data-v="R">Right</button></div></div>
+          <div class="seg wide glass" id="armSeg" role="group" aria-label="Arm"><button type="button" data-v="L">Left</button><button type="button" data-v="R">Right</button></div></div>
         <div><span class="label">Position</span>
-          <div class="seg wide" id="posSeg" role="group" aria-label="Position"><button type="button" data-v="seated">Seated</button><button type="button" data-v="standing">Standing</button><button type="button" data-v="lying">Lying</button></div></div>
+          <div class="seg wide glass" id="posSeg" role="group" aria-label="Position"><button type="button" data-v="seated">Seated</button><button type="button" data-v="standing">Standing</button><button type="button" data-v="lying">Lying</button></div></div>
       </div>
       <div class="field">
         <span class="label">What is going on? <span class="hint">tap all that apply</span></span>
@@ -313,7 +313,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <div class="tip" id="tip" hidden></div>
 
-<script src="ai.js?v=11"></script>
-<script src="app.js?v=11"></script>
+<script src="ai.js?v=12"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>
