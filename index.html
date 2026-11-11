@@ -19,7 +19,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=5">
+<link rel="stylesheet" href="styles.css?v=6">
 <script>
   // Apply the saved theme before first paint to avoid a flash.
   try { var t = localStorage.getItem('bp-baseline:theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -73,14 +73,20 @@
   <section class="view" id="view-trends" aria-labelledby="h-trends" hidden>
     <header class="vhead"><h1 id="h-trends">Trends</h1><p class="vsub" id="trendSub"></p></header>
     <div class="toolbar">
-      <div class="seg" role="group" aria-label="Date range" id="rangeSeg">
-        <button type="button" data-range="7">7D</button><button type="button" data-range="30">30D</button><button type="button" data-range="90">90D</button><button type="button" data-range="all">All</button>
+      <div class="seg" role="group" aria-label="Period" id="rangeSeg">
+        <button type="button" data-period="day">Day</button><button type="button" data-period="week">Week</button><button type="button" data-period="month">Month</button><button type="button" data-period="all">All</button>
       </div>
       <div class="seg" role="group" aria-label="View" id="viewSeg">
         <button type="button" data-view="chart">Chart</button><button type="button" data-view="table">Table</button>
       </div>
     </div>
     <article class="card" id="trendCard" aria-label="Blood pressure over time">
+      <div class="period-nav" id="periodNav">
+        <button type="button" id="pPrev" aria-label="Previous period"><svg class="i" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <span id="pLabel" aria-live="polite"></span>
+        <button type="button" id="pNext" aria-label="Next period"><svg class="i" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="readout" id="readout" aria-live="polite"></div>
       <div id="chartView">
         <div class="legend" id="trendLegend"></div>
         <div class="chart-wrap" id="bpChart"></div>
@@ -89,6 +95,10 @@
       </div>
       <div id="tableView" hidden></div>
     </article>
+    <section aria-label="This period" id="periodStatsWrap">
+      <h2 class="group-title" style="margin:6px 4px 8px">This period</h2>
+      <div class="hscroll" id="periodStats" tabindex="0"></div>
+    </section>
     <div class="grid2">
       <article class="card" id="catCard" aria-label="Category breakdown"></article>
       <article class="card" id="ctxCard" aria-label="What moves your numbers"></article>
@@ -172,15 +182,12 @@
 <dialog id="logDialog" aria-labelledby="logTitle">
   <form id="logForm" method="dialog" novalidate>
     <div class="grab" aria-hidden="true"></div>
-    <div class="sheet-head">
-      <button type="button" class="text-btn" id="cancelLog">Cancel</button>
+    <div class="sheet-head center">
       <h2 id="logTitle">New reading</h2>
-      <button type="submit" class="text-btn bold" id="saveLog">Save</button>
     </div>
     <div class="sheet-body">
-      <div class="field">
-        <label for="fWhen">When</label>
-        <input type="datetime-local" id="fWhen" required>
+      <div class="field when">
+        <input type="datetime-local" id="fWhen" required aria-label="Date and time of reading">
         <div class="quick" id="quickTimes">
           <button type="button" data-q="now">Now</button><button type="button" data-q="am">This morning</button><button type="button" data-q="pm">This evening</button>
         </div>
@@ -207,6 +214,13 @@
       </div>
       <div class="form-error" id="formError" role="alert" hidden></div>
       <p class="std-note" id="stdNote"></p>
+    </div>
+    <div class="sheet-foot">
+      <div class="pill-actions">
+        <button type="button" class="pill-btn" id="cancelLog">Cancel</button>
+        <span class="pill-sep" aria-hidden="true"></span>
+        <button type="submit" class="pill-btn strong" id="saveLog" disabled>Save</button>
+      </div>
     </div>
   </form>
 </dialog>
@@ -257,7 +271,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <div class="tip" id="tip" hidden></div>
 
-<script src="ai.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="ai.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

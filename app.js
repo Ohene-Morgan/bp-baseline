@@ -105,7 +105,7 @@ const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimatio
 /* ============ state ============ */
 const VIEWS = ['today', 'trends', 'insights', 'settings'];
 const TITLES = { today: 'Today', trends: 'Trends', insights: 'Insights', settings: 'Settings' };
-const state = { sessions: [], view: 'today', range: '30', tview: 'chart', pane: 'highlights', tableLimit: 15, editing: null, animChart: true };
+const state = { sessions: [], view: 'today', period: 'month', anchor: Date.now(), tview: 'chart', pane: 'highlights', tableLimit: 15, editing: null, animChart: true };
 
 function validSession(s) {
   return s && typeof s.id === 'string' && Number.isFinite(s.ts) && Number.isFinite(s.sys) && Number.isFinite(s.dia)
@@ -127,10 +127,34 @@ function save() {
 }
 
 /* ============ analytics ============ */
+/* The time window the Trends view is showing: a day, a rolling week, a calendar month, or everything. */
+function periodWindow() {
+  const now = Date.now(), a = Math.min(state.anchor, now);
+  if (state.period === 'all') {
+    const ss = state.sessions;
+    return { from: ss.length ? ss[0].ts - DAY / 4 : now - DAY, to: ss.length ? Math.max(now, ss[ss.length - 1].ts) : now };
+  }
+  if (state.period === 'day') { const from = startOfDay(a); return { from, to: startOfDay(from + DAY * 1.5) }; }
+  if (state.period === 'week') { const e = startOfDay(a); return { from: startOfDay(e - DAY * 5.5), to: startOfDay(e + DAY * 1.5) }; }
+  const d = new Date(a);
+  return { from: new Date(d.getFullYear(), d.getMonth(), 1).getTime(), to: new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime() };
+}
+function periodLabel(w) {
+  if (state.period === 'all') return 'All time';
+  if (state.period === 'day') return w.from === startOfDay(Date.now()) ? 'Today' : new Date(w.from).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  if (state.period === 'week') return `${fmtShort(w.from)} – ${fmtShort(w.to - 1)}`;
+  return new Date(w.from).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+function stepPeriod(dir) {
+  const a = new Date(Math.min(state.anchor, Date.now()));
+  if (state.period === 'day') state.anchor = a.getTime() + dir * DAY;
+  else if (state.period === 'week') state.anchor = a.getTime() + dir * 7 * DAY;
+  else if (state.period === 'month') state.anchor = new Date(a.getFullYear(), a.getMonth() + dir, 15).getTime();
+  state.anchor = Math.min(state.anchor, Date.now());
+}
 function rangeSessions() {
-  if (state.range === 'all') return state.sessions;
-  const from = Date.now() - Number(state.range) * DAY;
-  return state.sessions.filter(s => s.ts >= from);
+  const w = periodWindow();
+  return state.sessions.filter(s => s.ts >= w.from && s.ts < w.to);
 }
 
 function computeBaseline(all = state.sessions) {
@@ -438,7 +462,7 @@ function niceDayTicks(xmin, xmax, maxTicks) {
   const span = xmax - xmin;
   if (span <= 2 * DAY) {
     const step = span <= 8 * 36e5 ? 36e5 : 6 * 36e5; const out = [];
-    for (let t = Math.ceil(xmin / step) * step; t <= xmax; t += step) out.push({ t, label: fmtTime(t) });
+    for (let t = startOfDay(xmin); t <= xmax; t += step) if (t >= xmin) out.push({ t, label: new Date(t).toLocaleTimeString(undefined, { hour: 'numeric' }) });
     return out;
   }
   const days = Math.ceil(span / DAY), step = Math.max(1, Math.ceil(days / maxTicks));
@@ -462,8 +486,10 @@ function lineChart(el, o) {
   const y = v => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
 
   let g = '';
-  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step)
-    g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+    const key = (o.emph || []).includes(v);   // 120 / 80 reference lines are drawn heavier
+    g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="${key ? 'var(--muted)' : 'var(--grid)'}" stroke-width="${key ? 1.25 : 1}" ${key ? 'opacity=".55"' : ''}/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" ${key ? 'style="font-weight:700;fill:var(--ink-2)"' : ''}>${v}</text>`;
+  }
   const xt = niceDayTicks(xmin, xmax, W < 520 ? 4 : 7);
   for (const k of xt) if (x(k.t) > m.l + 10 && x(k.t) < W - m.r - 10)
     g += `<text x="${x(k.t)}" y="${H - 6}" text-anchor="middle">${k.label}</text>`;
@@ -498,13 +524,14 @@ function lineChart(el, o) {
     const cx = x(best.ts);
     xh.removeAttribute('display'); xline.setAttribute('x1', cx); xline.setAttribute('x2', cx);
     hl.innerHTML = series.filter(s => Number.isFinite(best[s.key])).map(s => `<circle cx="${cx}" cy="${y(best[s.key])}" r="6.5" fill="${s.color}" stroke="var(--card)" stroke-width="2.5"/>`).join('');
+    if (o.onHover) o.onHover(best);
     tip.innerHTML = o.tip(best); tip.hidden = false;
     const tw = tip.offsetWidth, th = tip.offsetHeight;
     let left = e.clientX + 16; if (left + tw > innerWidth - 8) left = e.clientX - tw - 16; left = Math.max(8, left);
     let top = e.clientY - th - 12; if (top < 8) top = e.clientY + 18;
     tip.style.left = left + 'px'; tip.style.top = top + 'px';
   };
-  const leave = () => { xh.setAttribute('display', 'none'); hl.innerHTML = ''; hideTip(); };
+  const leave = () => { xh.setAttribute('display', 'none'); hl.innerHTML = ''; hideTip(); if (o.onHover) o.onHover(null); };
   hit.addEventListener('pointermove', show); hit.addEventListener('pointerdown', show);
   hit.addEventListener('pointerleave', leave); hit.addEventListener('pointercancel', leave);
 }
@@ -512,11 +539,13 @@ function lineChart(el, o) {
 function renderTrend() {
   const ss = rangeSessions();
   const base = computeBaseline();
-  const now = Date.now();
-  const xmin = state.range === 'all' ? (ss[0] ? ss[0].ts - DAY / 4 : now - DAY) : now - Number(state.range) * DAY;
-  const xmax = state.range === 'all' ? (ss.length ? Math.max(now, ss[ss.length - 1].ts) : now) : now;
+  const win = periodWindow(), xmin = win.from, xmax = win.to;
 
-  $$('#rangeSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.range === state.range)));
+  $$('#rangeSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.period === state.period)));
+  $('#pLabel').textContent = periodLabel(win);
+  $('#periodNav').classList.toggle('static', state.period === 'all');
+  $('#pNext').disabled = state.period === 'all' || win.to > Date.now();
+  $('#pPrev').disabled = state.period === 'all' || !state.sessions.length || win.from <= state.sessions[0].ts - (state.period === 'month' ? 31 * DAY : 0);
   $$('#viewSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === state.tview)));
   $('#chartView').hidden = state.tview !== 'chart';
   $('#tableView').hidden = state.tview !== 'table';
@@ -528,13 +557,15 @@ function renderTrend() {
   if (base.ready) lg.push(`<span><i class="sw dash" style="--c:var(--ink-2)"></i>Your baseline</span>`);
   lg.push(`<span><i class="mk fill"></i>Standard</span><span><i class="mk"></i>Not standard</span>`);
   $('#trendLegend').innerHTML = lg.join('');
+  renderReadout(null);
+  renderPeriodStats(ss);
 
   if (state.tview === 'table') { renderTable(ss); return; }
 
   const animate = state.animChart && !RM(); state.animChart = false;
   const narrow = innerWidth < 520;
   lineChart($('#bpChart'), {
-    pts: ss, xmin, xmax, h: narrow ? 260 : 320, animate,
+    pts: ss, xmin, xmax, h: narrow ? 260 : 320, animate, emph: [120, 80], onHover: renderReadout,
     series: [{ key: 'sys', label: 'Systolic', color: 'var(--s1)' }, { key: 'dia', label: 'Diastolic', color: 'var(--s2)' }],
     baselines: base.ready ? [{ v: base.sys, color: 'var(--s1)' }, { v: base.dia, color: 'var(--s2)' }] : [],
     aria: ss.length ? `Systolic and diastolic blood pressure over time. Average ${avgS} over ${avgD} millimetres of mercury across ${ss.length} readings.` : 'No data',
@@ -548,6 +579,38 @@ function renderTrend() {
     tip: s => tipHTML(s, base),
   });
   if (!withPulse.length) $('#pulseChart').innerHTML = `<div class="empty-chart">Add pulse to your readings to see it here.</div>`;
+}
+
+/* Readout above the chart: the period average, or the exact reading under your finger / cursor. */
+function renderReadout(p) {
+  const ss = rangeSessions(), src = p ? [p] : ss;
+  const v = (k) => src.length ? Math.round(mean(src.map(s => s[k]))) : '--';
+  const when = p ? `${fmtDay(p.ts)} · ${fmtTime(p.ts)}` : (ss.length ? `Average of ${ss.length} reading${ss.length === 1 ? '' : 's'}` : 'No readings in this period');
+  $('#readout').innerHTML = `<div class="ro-when">${when}</div>
+    <div class="ro-cols">
+      <div><span class="ro-tag"><i style="--c:var(--s1)"></i>Systolic</span><div class="ro-val num">${v('sys')}<span class="unit"> mmHg</span></div></div>
+      <div><span class="ro-tag"><i style="--c:var(--s2)"></i>Diastolic</span><div class="ro-val num">${v('dia')}<span class="unit"> mmHg</span></div></div>
+    </div>`;
+}
+
+/* Swipeable summary cards for the period on screen. */
+function renderPeriodStats(ss) {
+  const el = $('#periodStats');
+  if (!ss.length) { el.innerHTML = `<div class="mini wide"><div class="k">No readings in this period</div><div class="s">Step back with the arrows above, or log a reading.</div></div>`; return; }
+  const hi = ss.reduce((a, b) => (b.sys > a.sys ? b : a)), lo = ss.reduce((a, b) => (b.sys < a.sys ? b : a));
+  const pulses = ss.map(s => s.pulse).filter(Number.isFinite);
+  const normal = ss.filter(s => classify(s.sys, s.dia) === 'normal').length;
+  const std = ss.filter(isStandard).length;
+  const card = (k, v, s, cat) => `<div class="mini"><div class="k">${k}</div><div class="v num">${v}</div><div class="s">${s}</div>${cat ? chip(cat) : ''}</div>`;
+  const avgS = Math.round(mean(ss.map(s => s.sys))), avgD = Math.round(mean(ss.map(s => s.dia)));
+  el.innerHTML = [
+    card('Average', `${avgS}/${avgD}`, 'mmHg', classify(avgS, avgD)),
+    card('Highest', `${hi.sys}/${hi.dia}`, `${fmtShort(hi.ts)}, ${fmtTime(hi.ts)}`, classify(hi.sys, hi.dia)),
+    card('Lowest', `${lo.sys}/${lo.dia}`, `${fmtShort(lo.ts)}, ${fmtTime(lo.ts)}`, classify(lo.sys, lo.dia)),
+    pulses.length ? card('Pulse', Math.round(mean(pulses)), 'bpm average') : '',
+    card('In normal range', `${Math.round(normal / ss.length * 100)}%`, `${normal} of ${ss.length} readings`),
+    card('Standard readings', std, `of ${ss.length} counted for baseline`),
+  ].join('');
 }
 
 function renderTable(ss) {
@@ -569,7 +632,7 @@ function renderTable(ss) {
 /* ============ rendering: trends extras ============ */
 function renderCategory() {
   const ss = rangeSessions(), el = $('#catCard');
-  const label = state.range === 'all' ? 'all time' : `last ${state.range} days`;
+  const label = periodLabel(periodWindow()).toLowerCase();
   if (!ss.length) { el.innerHTML = `<h2 class="t">Categories</h2><p class="sub">Once you log readings, you will see how they split across categories (${label}).</p>`; return; }
   const counts = {}; ss.forEach(s => { const c = classify(s.sys, s.dia); counts[c] = (counts[c] || 0) + 1; });
   const present = CAT_ORDER.filter(c => counts[c]);
@@ -673,6 +736,7 @@ function addRow(vals) {
   $('#addRow').hidden = i + 1 >= 3;
 }
 function updatePreview() {
+  $('#saveLog').disabled = !readRows().some(r => Number.isFinite(r.sys) && Number.isFinite(r.dia));   // dimmed until there is something to save
   const rs = readRows().filter(r => Number.isFinite(r.sys) && Number.isFinite(r.dia) && r.sys > r.dia);
   const pv = $('#preview');
   if (!rs.length) { pv.innerHTML = ''; return; }
@@ -826,7 +890,10 @@ function wire() {
   $('#posSeg').addEventListener('click', e => { if (e.target.dataset.v) { form.pos = e.target.dataset.v; syncFormUI(); } });
   $('#tagChips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const t = b.dataset.t; form.tags.has(t) ? form.tags.delete(t) : form.tags.add(t); syncFormUI(); if (navigator.vibrate) navigator.vibrate(6); });
 
-  $('#rangeSeg').addEventListener('click', e => { if (e.target.dataset.range) { state.range = e.target.dataset.range; state.tableLimit = 15; state.animChart = true; renderTrend(); renderCategory(); } });
+  $('#rangeSeg').addEventListener('click', e => { if (e.target.dataset.period) { state.period = e.target.dataset.period; state.anchor = Date.now(); state.tableLimit = 15; state.animChart = true; renderTrend(); renderCategory(); renderContext(); } });
+  const step = dir => { stepPeriod(dir); state.tableLimit = 15; state.animChart = true; renderTrend(); renderCategory(); };
+  $('#pPrev').addEventListener('click', () => step(-1));
+  $('#pNext').addEventListener('click', () => step(1));
   $('#viewSeg').addEventListener('click', e => { if (e.target.dataset.view) { state.tview = e.target.dataset.view; state.animChart = true; renderTrend(); } });
   $('#insSeg').addEventListener('click', e => { if (e.target.dataset.pane) { state.pane = e.target.dataset.pane; renderPane(true); } });
   $('#tableView').addEventListener('click', e => {
