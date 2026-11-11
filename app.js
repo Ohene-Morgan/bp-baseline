@@ -1010,21 +1010,32 @@ function submitForm(e) {
     arm: form.arm, pos: form.pos, tags: [...form.tags], note: $('#fNote').value.trim(),
   };
   if (prev && prev.sample) s.sample = true;
-  const before = computeStreak();
+  const before = computeStreak(), snap = state.sessions;      // snap lets "Undo" put everything back exactly
   state.sessions = state.sessions.filter(x => x.id !== s.id).concat(s).sort((a, b) => a.ts - b.ts);
   save(); closeSheet($('#logDialog'));
   state.animChart = false; renderAll();
   const after = computeStreak(), grew = !prev && after.current > before.current;
   const hit = grew && MILESTONES.includes(after.current);
   const catLabel = CATS[classify(s.sys, s.dia)].label;
-  toast(prev ? 'Reading updated' : grew && !hit ? `Saved ${s.sys}/${s.dia} · ${after.current}-day streak` : `Saved ${s.sys}/${s.dia} · ${catLabel}`);
+  toast(prev ? 'Reading updated' : grew && !hit ? `Saved ${s.sys}/${s.dia} · ${after.current}-day streak` : `Saved ${s.sys}/${s.dia} · ${catLabel}`,
+    { label: 'Undo', fn: () => { state.sessions = snap; save(); state.animChart = false; renderAll(); toast(prev ? 'Change undone' : 'Reading removed'); } });
   if (classify(s.sys, s.dia) === 'crisis') go('today');
-  if (hit) setTimeout(() => celebrate(after.current), 650);
+  if (hit) setTimeout(() => { if (computeStreak().current >= after.current) celebrate(after.current); }, 650);
 }
 
 /* ============ data tools ============ */
 let toastT;
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; t.style.animation = 'none'; void t.offsetWidth; t.style.animation = ''; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3200); }
+function toast(msg, act) {
+  const t = $('#toast'); t.textContent = '';
+  const s = document.createElement('span'); s.textContent = msg; t.append(s);
+  if (act) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-act'; b.textContent = act.label;
+    b.addEventListener('click', () => { clearTimeout(toastT); t.hidden = true; act.fn(); });
+    t.append(b);
+  }
+  t.hidden = false; t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, act ? 6000 : 3200);
+}
 function download(name, text, type) {
   const url = URL.createObjectURL(new Blob([text], { type })), a = document.createElement('a');
   a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -1121,7 +1132,11 @@ function wire() {
   $('#tableView').addEventListener('click', e => {
     const t = e.target;
     if (t.dataset.edit) { const s = state.sessions.find(x => x.id === t.dataset.edit); if (s) openLog(s); }
-    if (t.dataset.del && confirm('Delete this reading?')) { state.sessions = state.sessions.filter(x => x.id !== t.dataset.del); save(); state.animChart = false; renderAll(); toast('Reading deleted'); }
+    if (t.dataset.del) {   // no confirm dialog: delete right away, with a few seconds to undo
+      const snap = state.sessions;
+      state.sessions = state.sessions.filter(x => x.id !== t.dataset.del); save(); state.animChart = false; renderAll();
+      toast('Reading deleted', { label: 'Undo', fn: () => { state.sessions = snap; save(); state.animChart = false; renderAll(); toast('Reading restored'); } });
+    }
     if (t.id === 'moreRows') { state.tableLimit += 20; renderTrend(); }
   });
   document.addEventListener('click', e => {
@@ -1137,7 +1152,7 @@ function wire() {
   $('#importBtn').addEventListener('click', () => $('#importFile').click());
   $('#importFile').addEventListener('change', e => { if (e.target.files[0]) importJson(e.target.files[0]); e.target.value = ''; });
   $('#loadSample').addEventListener('click', () => { loadSample(); toast('Sample data loaded. Clear it any time.'); });
-  $('#clearSample').addEventListener('click', () => { state.sessions = state.sessions.filter(s => !s.sample); save(); renderAll(); toast('Sample data cleared'); });
+  $('#clearSample').addEventListener('click', () => { const snap = state.sessions; state.sessions = state.sessions.filter(s => !s.sample); save(); renderAll(); toast('Sample data cleared', { label: 'Undo', fn: () => { state.sessions = snap; save(); renderAll(); } }); });
   $('#wipe').addEventListener('click', () => {
     if (confirm('Delete ALL readings stored in this browser? Export a backup first if you want to keep them.')) { state.sessions = []; save(); AI.clearReport(); renderAll(); toast('All data deleted'); }
   });
