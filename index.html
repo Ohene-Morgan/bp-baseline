@@ -19,7 +19,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=7">
+<link rel="stylesheet" href="styles.css?v=8">
 <script>
   // Apply the saved theme before first paint to avoid a flash.
   try { var t = localStorage.getItem('bp-baseline:theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -80,6 +80,7 @@
       <div class="seg" role="group" aria-label="View" id="viewSeg">
         <button type="button" data-view="chart">Chart</button><button type="button" data-view="table">Table</button>
       </div>
+      <button class="btn small toolbar-end" id="shareSummary" type="button"><svg class="i" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/></svg>Share summary</button>
     </div>
     <article class="card" id="trendCard" aria-label="Blood pressure over time">
       <div class="period-nav" id="periodNav">
@@ -288,7 +289,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <div class="tip" id="tip" hidden></div>
 
-<script src="ai.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="ai.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

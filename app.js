@@ -494,6 +494,7 @@ function streakMessage(st) {
 function renderStreak() {
   const el = $('#streakCard'), st = computeStreak();
   const flame = st.current === 0 ? 'off' : st.loggedToday ? 'lit' : 'ember';
+  el.classList.toggle('nudge', !st.loggedToday && st.current > 0 && (st.atRisk || new Date().getHours() >= 17));   // a warmer card when the day is running out
   const next = nextMilestone(st.current), prev = prevMilestone(st.current);
   const pct = st.current === 0 ? 0 : Math.round((st.current - prev) / (next - prev) * 100);
   const today = startOfDay(Date.now());
@@ -525,6 +526,34 @@ function renderStreak() {
     ${st.loggedToday ? '' : '<button class="btn primary block streak-cta" data-act="log" type="button">Log today\'s reading</button>'}
     <p class="fine streak-note">Streaks count the days you measured, whatever the numbers were.</p>`;
   runCounts(el);
+}
+
+/* Plain-text summary of the period on screen, for sharing with a partner or doctor. */
+function buildSummaryText() {
+  const ss = rangeSessions(), win = periodWindow(), base = computeBaseline(), r = Math.round;
+  const lines = [`Blood pressure summary · ${periodLabel(win)}`];
+  if (!ss.length) return lines.concat('No readings in this period.').join('\n');
+  const hi = ss.reduce((a, b) => (b.sys > a.sys ? b : a)), lo = ss.reduce((a, b) => (b.sys < a.sys ? b : a));
+  const avgS = r(mean(ss.map(s => s.sys))), avgD = r(mean(ss.map(s => s.dia)));
+  const normal = ss.filter(s => classify(s.sys, s.dia) === 'normal').length;
+  const pulses = ss.map(s => s.pulse).filter(Number.isFinite);
+  lines.push('', `Readings: ${ss.length} (${ss.filter(isStandard).length} under standard conditions)`,
+    `Average: ${avgS}/${avgD} mmHg (${CATS[classify(avgS, avgD)].label})`,
+    `Highest: ${hi.sys}/${hi.dia} on ${fmtShort(hi.ts)}`, `Lowest: ${lo.sys}/${lo.dia} on ${fmtShort(lo.ts)}`);
+  if (pulses.length) lines.push(`Average pulse: ${r(mean(pulses))} bpm`);
+  lines.push(`In the normal range: ${r(normal / ss.length * 100)}% of readings`);
+  if (base.ready) lines.push('', `Baseline (rested, seated readings): ${r(base.sys)}/${r(base.dia)} mmHg, typical range ${r(base.sys - base.sdS)}–${r(base.sys + base.sdS)} over ${r(base.dia - base.sdD)}–${r(base.dia + base.sdD)}`);
+  const fx = contextDeltas(base).slice(0, 3);
+  if (fx.length) lines.push('', 'What moved the numbers: ' + fx.map(x => `${x.tag.label.toLowerCase()} ${signed(x.ds)}/${signed(x.dd)}`).join(', '));
+  const st = computeStreak();
+  if (st.current > 1) lines.push('', `Logging streak: ${st.current} days`);
+  lines.push('', 'Home readings only. Not a diagnosis. Made with Baseline.');
+  return lines.join('\n');
+}
+async function shareSummary() {
+  const text = buildSummaryText(), title = `Blood pressure summary · ${periodLabel(periodWindow())}`;
+  if (navigator.share) { try { await navigator.share({ title, text }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(text); toast('Summary copied. Paste it into a message.'); } catch (e) { toast('Could not share. Try Export CSV in Settings.'); }
 }
 
 /* Milestone celebration: a short, tasteful moment. */
@@ -1057,6 +1086,9 @@ function wire() {
   $('#celebrate').addEventListener('click', e => { if (e.target.id === 'celebrate') closeCelebrate(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCelebrate(); });
   $('#remBtn').addEventListener('click', downloadReminder);
+  $('#shareSummary').addEventListener('click', shareSummary);
+  // Coming back to the app later in the day (or after midnight) should show the current streak state.
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.view === 'today') { renderStreak(); renderWeek(); } });
   $('#remTime').addEventListener('change', e => writeMeta({ remTime: e.target.value }));
   $('#installBtn').addEventListener('click', async () => {
     if (!deferredInstall) return;

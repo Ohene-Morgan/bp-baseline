@@ -466,6 +466,10 @@ input:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--acce
 .cel-card .flame.big { animation: pop .7s var(--spring) both; }
 .cel-burst { position: absolute; left: 50%; top: 86px; width: 0; height: 0; pointer-events: none; }
 .cel-burst i { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: var(--c); left: -4px; top: -4px; opacity: 0; animation: burst .95s var(--ease) var(--d) both; }
+.toolbar-end { margin-left: auto; align-self: center; }
+.streak.nudge { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--flame) 55%, transparent); background: color-mix(in srgb, var(--flame) 6%, var(--card)); }
+.streak.nudge .streak-cta { background: var(--flame); animation: nudge 2.6s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015); } }
 .time-in { font: inherit; color: var(--ink); background: var(--fill); border: 0; border-radius: 10px; padding: 8px 12px; min-height: 40px; }
 @keyframes flicker { 0%, 100% { transform: scale(1) rotate(0); } 25% { transform: scale(1.04, 1.07) rotate(-1.5deg); } 50% { transform: scale(.98, 1.02) rotate(1deg); } 75% { transform: scale(1.03, 1.05) rotate(-.5deg); } }
 @keyframes ember { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
