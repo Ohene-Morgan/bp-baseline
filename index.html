@@ -4,197 +4,252 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Baseline — Blood Pressure Tracker</title>
-<meta name="description" content="Log your home blood pressure with context, find your true baseline, and see what moves your numbers. Private: your data never leaves your device.">
+<meta name="description" content="Log your home blood pressure with context, find your true baseline, and see what moves your numbers. Private by design: your data stays on your device.">
 <meta name="color-scheme" content="light dark">
+<meta name="theme-color" id="tcLight" media="(prefers-color-scheme: light)" content="#f2f2f7">
+<meta name="theme-color" id="tcDark" media="(prefers-color-scheme: dark)" content="#000000">
+<meta name="application-name" content="Baseline">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Baseline">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta property="og:title" content="Baseline — find your true blood pressure">
 <meta property="og:description" content="A private, beautiful blood pressure tracker. Log readings with context, see your baseline, trends and insights.">
 <meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Cpath d='M4 17h6l3-7 5 13 3-6h7' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="stylesheet" href="styles.css">
 <script>
-  // Apply saved theme before paint to avoid a flash.
-  try { var t = localStorage.getItem('bp-baseline:theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  // Apply the saved theme before first paint to avoid a flash.
+  try { var t = localStorage.getItem('bp-baseline:theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
 </script>
 </head>
 <body>
 
-<header class="top">
-  <div class="wrap top-in">
-    <a class="brand" href="#" aria-label="Baseline home">
-      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--s1)"/><path d="M4 17h6l3-7 5 13 3-6h7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<header class="topbar" id="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#today" aria-label="Baseline">
+      <img src="icons/icon-192.png" width="28" height="28" alt="" class="brand-mark">
       <span>Baseline</span>
     </a>
-    <div class="top-actions">
-      <button class="icon-btn" id="themeBtn" aria-label="Toggle dark mode" title="Toggle dark mode">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-      </button>
-      <button class="btn primary" id="openLog">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        Log reading
-      </button>
-    </div>
+    <div class="nav-title" id="navTitle" aria-hidden="true">Today</div>
+    <nav class="desk-nav" aria-label="Sections">
+      <a href="#today" data-nav="today">Today</a>
+      <a href="#trends" data-nav="trends">Trends</a>
+      <a href="#insights" data-nav="insights">Insights</a>
+      <a href="#settings" data-nav="settings">Settings</a>
+    </nav>
+    <button class="btn primary desk-log" id="openLogDesk" type="button">
+      <svg class="i" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Log reading
+    </button>
   </div>
 </header>
 
 <main class="wrap" id="main">
 
   <div class="banner crisis" id="crisis" role="alert" hidden></div>
-  <div class="banner sample" id="sampleBar" hidden>
-    <span><strong>Sample data is showing.</strong> These are made-up readings so you can explore the dashboard.</span>
-    <button class="btn small" id="clearSample">Clear sample data</button>
-  </div>
-  <div class="banner warn" id="storageWarn" hidden>
-    Your browser is blocking local storage, so readings will be lost when you close this tab. Export your data often.
-  </div>
+  <div class="banner" id="storageWarn" hidden>Your browser is blocking local storage, so readings will be lost when this tab closes. Export your data often.</div>
 
-  <section class="hero" aria-label="Summary">
-    <article class="card baseline-card" id="baselineCard"></article>
-    <article class="card latest-card" id="latestCard"></article>
+  <!-- ========== TODAY ========== -->
+  <section class="view" id="view-today" aria-labelledby="h-today">
+    <header class="vhead"><h1 id="h-today">Today</h1><p class="vsub" id="todayDate"></p></header>
+    <div class="banner sample" id="sampleBar" hidden>
+      <span><strong>Sample data is showing.</strong> These are made-up readings so you can explore.</span>
+      <button class="btn small" id="clearSample" type="button">Clear sample</button>
+    </div>
+    <div class="banner backup" id="backupBar" hidden>
+      <span><strong>Back up your readings.</strong> They live only on this device.</span>
+      <span class="banner-actions"><button class="btn small" id="backupNow" type="button">Export</button><button class="btn small ghost" id="backupLater" type="button">Later</button></span>
+    </div>
+    <div class="hero">
+      <article class="card" id="baselineCard"></article>
+      <article class="card" id="latestCard"></article>
+    </div>
+    <article class="card" id="weekCard" aria-label="Last 7 days"></article>
   </section>
 
-  <section class="card week-card" id="weekCard" aria-label="Last 7 days"></section>
-
-  <section class="card" id="trendCard" aria-label="Trends">
-    <div class="card-head">
-      <div>
-        <h2>Trend</h2>
-        <p class="sub" id="trendSub"></p>
+  <!-- ========== TRENDS ========== -->
+  <section class="view" id="view-trends" aria-labelledby="h-trends" hidden>
+    <header class="vhead"><h1 id="h-trends">Trends</h1><p class="vsub" id="trendSub"></p></header>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Date range" id="rangeSeg">
+        <button type="button" data-range="7">7D</button><button type="button" data-range="30">30D</button><button type="button" data-range="90">90D</button><button type="button" data-range="all">All</button>
       </div>
-      <div class="controls">
-        <div class="seg" role="group" aria-label="Date range" id="rangeSeg">
-          <button data-range="7">7d</button>
-          <button data-range="30">30d</button>
-          <button data-range="90">90d</button>
-          <button data-range="all">All</button>
-        </div>
-        <div class="seg" role="group" aria-label="View" id="viewSeg">
-          <button data-view="chart">Chart</button>
-          <button data-view="table">Table</button>
-        </div>
+      <div class="seg" role="group" aria-label="View" id="viewSeg">
+        <button type="button" data-view="chart">Chart</button><button type="button" data-view="table">Table</button>
       </div>
     </div>
-    <div id="chartView">
-      <div class="legend" id="trendLegend"></div>
-      <div class="chart-wrap" id="bpChart"></div>
-      <h3 class="mini-title">Pulse <span class="unit">bpm</span></h3>
-      <div class="chart-wrap" id="pulseChart"></div>
-    </div>
-    <div id="tableView" hidden></div>
-  </section>
-
-  <section class="grid2">
-    <article class="card" id="catCard" aria-label="Category breakdown"></article>
-    <article class="card" id="ctxCard" aria-label="What moves your numbers"></article>
-  </section>
-
-  <section aria-label="Insights">
-    <h2 class="section-title">Insights</h2>
-    <div class="insights" id="insights"></div>
-  </section>
-
-  <section class="card guide" aria-label="How it works">
-    <h2>How your baseline is calculated</h2>
-    <div class="guide-grid">
-      <div>
-        <ol class="steps">
-          <li><strong>Measure the same way each time.</strong> Sit with your back supported, feet flat, arm at heart level, after 5 minutes of quiet. Skip caffeine, exercise and smoking for 30 minutes.</li>
-          <li><strong>Take 2–3 readings a minute apart</strong> in the log form. They are averaged into one session.</li>
-          <li><strong>Measure morning and evening for about a week.</strong> Home monitoring guidance suggests this, and drops the first day.</li>
-          <li><strong>Tag what is going on.</strong> Only seated readings with no coffee, exercise, meal, stress, alcohol, nicotine, full bladder or illness count toward your baseline. Everything else is compared <em>against</em> it.</li>
-        </ol>
+    <article class="card" id="trendCard" aria-label="Blood pressure over time">
+      <div id="chartView">
+        <div class="legend" id="trendLegend"></div>
+        <div class="chart-wrap" id="bpChart"></div>
+        <h3 class="mini-title">Pulse <span class="unit">bpm</span></h3>
+        <div class="chart-wrap" id="pulseChart"></div>
       </div>
-      <div>
-        <table class="cat-table">
-          <caption>Adult blood pressure categories (mmHg)</caption>
-          <thead><tr><th>Category</th><th>Systolic</th><th></th><th>Diastolic</th></tr></thead>
-          <tbody id="catTable"></tbody>
-        </table>
-        <p class="fine">Categories follow the AHA/ACC guideline (unchanged in the 2025 update). A diagnosis needs averaged readings across more than one occasion. Source: <a href="https://www.ahajournals.org/doi/10.1161/HYP.0000000000000249" target="_blank" rel="noopener">2025 AHA/ACC High Blood Pressure Guideline</a>. “Low” (under 90/60) is an informal flag, not a guideline category.</p>
-      </div>
+      <div id="tableView" hidden></div>
+    </article>
+    <div class="grid2">
+      <article class="card" id="catCard" aria-label="Category breakdown"></article>
+      <article class="card" id="ctxCard" aria-label="What moves your numbers"></article>
     </div>
   </section>
 
-  <section class="card data-card" aria-label="Your data">
-    <div>
-      <h2>Your data stays with you</h2>
-      <p class="sub">Readings are saved only in this browser on this device. Nothing is uploaded and there are no accounts. Because of that, export a backup now and then, and use the same browser each time.</p>
+  <!-- ========== INSIGHTS ========== -->
+  <section class="view" id="view-insights" aria-labelledby="h-insights" hidden>
+    <header class="vhead"><h1 id="h-insights">Insights</h1><p class="vsub">What your readings say, and an optional AI assistant.</p></header>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Insights section" id="insSeg">
+        <button type="button" data-pane="highlights">Highlights</button><button type="button" data-pane="report">AI report</button><button type="button" data-pane="chat">Ask Claude</button>
+      </div>
     </div>
-    <div class="data-actions">
-      <button class="btn" id="exportJson">Export backup (JSON)</button>
-      <button class="btn" id="exportCsv">Export CSV</button>
-      <button class="btn" id="importBtn">Import backup</button>
+    <div id="pane-highlights" class="pane"><div class="insights" id="insights"></div></div>
+    <div id="pane-report" class="pane" hidden></div>
+    <div id="pane-chat" class="pane" hidden></div>
+  </section>
+
+  <!-- ========== SETTINGS ========== -->
+  <section class="view" id="view-settings" aria-labelledby="h-settings" hidden>
+    <header class="vhead"><h1 id="h-settings">Settings</h1><p class="vsub">Your data stays on this device.</p></header>
+
+    <h2 class="group-title">Claude AI <span>optional</span></h2>
+    <div class="group">
+      <button class="row" id="aiRow" type="button"><span class="row-main"><span class="row-t">Connect Claude</span><span class="row-s" id="aiRowSub">Add your own API key for AI reports and chat</span></span><svg class="i chev" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+
+    <h2 class="group-title">Appearance</h2>
+    <div class="group"><div class="row static"><span class="row-main"><span class="row-t">Theme</span></span>
+      <div class="seg" id="themeSeg" role="group" aria-label="Theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div></div></div>
+
+    <div id="installGroup" hidden>
+      <h2 class="group-title">App</h2>
+      <div class="group">
+        <button class="row" id="installBtn" type="button" hidden><span class="row-main"><span class="row-t">Install Baseline</span><span class="row-s">Add it to your home screen or dock. Works offline.</span></span><svg class="i chev" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <div class="row static" id="iosHint" hidden><span class="row-main"><span class="row-t">Install on iPhone or iPad</span><span class="row-s">Tap the Share button in Safari, then “Add to Home Screen”.</span></span></div>
+      </div>
+    </div>
+
+    <h2 class="group-title">Your data</h2>
+    <div class="group">
+      <button class="row" id="exportJson" type="button"><span class="row-main"><span class="row-t">Export backup</span><span class="row-s">JSON file you can import again later</span></span></button>
+      <button class="row" id="exportCsv" type="button"><span class="row-main"><span class="row-t">Export CSV</span><span class="row-s">For spreadsheets or your doctor</span></span></button>
+      <button class="row" id="importBtn" type="button"><span class="row-main"><span class="row-t">Import backup</span></span></button>
       <input type="file" id="importFile" accept="application/json,.json" hidden>
-      <button class="btn" id="loadSample">Load sample data</button>
-      <button class="btn danger" id="wipe">Delete all my data</button>
+      <button class="row" id="loadSample" type="button"><span class="row-main"><span class="row-t">Load sample data</span><span class="row-s">28 days of made-up readings to explore the app</span></span></button>
+      <button class="row danger" id="wipe" type="button"><span class="row-main"><span class="row-t">Delete all my data</span></span></button>
     </div>
-  </section>
+    <p class="group-note">Readings are saved only in this browser. Nothing is uploaded and there are no accounts. Use the same browser each time, and export a backup now and then.</p>
 
-  <p class="disclaimer"><strong>Not medical advice.</strong> This tool is not a medical device and does not diagnose anything. Home readings vary with the cuff, the day and your technique. Talk to a doctor or pharmacist about your numbers, and use a validated upper-arm monitor. If you have chest pain, trouble breathing, weakness, vision changes or trouble speaking, call emergency services.</p>
+    <h2 class="group-title">How the baseline works</h2>
+    <article class="card guide">
+      <ol class="steps">
+        <li><strong>Measure the same way each time.</strong> Sit with your back supported, feet flat, arm at heart level, after 5 quiet minutes. Skip caffeine, exercise and smoking for 30 minutes.</li>
+        <li><strong>Take 2 or 3 readings a minute apart.</strong> Baseline averages them into one session.</li>
+        <li><strong>Measure morning and evening for about a week.</strong> Home-monitoring guidance suggests this and drops the first day.</li>
+        <li><strong>Tag what is going on.</strong> Only seated readings with no coffee, exercise, meal, stress, alcohol, nicotine, full bladder or illness count toward your baseline. Everything else is compared against it.</li>
+      </ol>
+      <table class="cat-table">
+        <caption>Adult blood pressure categories (mmHg)</caption>
+        <thead><tr><th>Category</th><th>Systolic</th><th></th><th>Diastolic</th></tr></thead>
+        <tbody id="catTable"></tbody>
+      </table>
+      <p class="fine">Categories follow the AHA/ACC guideline, unchanged in the 2025 update. A diagnosis needs averaged readings on more than one occasion. Source: <a href="https://www.ahajournals.org/doi/10.1161/HYP.0000000000000249" target="_blank" rel="noopener">2025 AHA/ACC High Blood Pressure Guideline</a>. “Low” (under 90/60) is an informal flag, not a guideline category.</p>
+    </article>
+
+    <p class="disclaimer"><strong>Not medical advice.</strong> Baseline is not a medical device and does not diagnose anything. Home readings vary with the cuff, the day and your technique. Talk to a doctor or pharmacist about your numbers, and use a validated upper-arm monitor. If you have chest pain, trouble breathing, weakness, vision changes or trouble speaking, call emergency services.</p>
+  </section>
 </main>
 
-<footer class="foot"><div class="wrap">Baseline · open source · works offline once loaded · your data never leaves this device</div></footer>
+<nav class="tabbar" aria-label="Sections">
+  <a href="#today" data-nav="today"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><span>Today</span></a>
+  <a href="#trends" data-nav="trends"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg><span>Trends</span></a>
+  <button class="tab-add" id="openLog" type="button" aria-label="Log a reading"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  <a href="#insights" data-nav="insights"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg><span>Insights</span></a>
+  <a href="#settings" data-nav="settings"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>Settings</span></a>
+</nav>
 
+<!-- ========== Log sheet ========== -->
 <dialog id="logDialog" aria-labelledby="logTitle">
   <form id="logForm" method="dialog" novalidate>
-    <div class="dlg-head">
-      <h2 id="logTitle">Log a reading</h2>
-      <button type="button" class="icon-btn" id="closeLog" aria-label="Close">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+    <div class="grab" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <button type="button" class="text-btn" id="cancelLog">Cancel</button>
+      <h2 id="logTitle">New reading</h2>
+      <button type="submit" class="text-btn bold" id="saveLog">Save</button>
     </div>
-
-    <div class="field">
-      <label for="fWhen">When</label>
-      <div class="when-row">
+    <div class="sheet-body">
+      <div class="field">
+        <label for="fWhen">When</label>
         <input type="datetime-local" id="fWhen" required>
         <div class="quick" id="quickTimes">
-          <button type="button" data-q="now">Now</button>
-          <button type="button" data-q="am">This morning</button>
-          <button type="button" data-q="pm">This evening</button>
+          <button type="button" data-q="now">Now</button><button type="button" data-q="am">This morning</button><button type="button" data-q="pm">This evening</button>
         </div>
       </div>
-    </div>
-
-    <div class="field">
-      <div class="label-row"><span class="label">Readings <span class="hint">from your cuff</span></span></div>
-      <div id="readingRows"></div>
-      <button type="button" class="link-btn" id="addRow">+ Add another reading (2–3, one minute apart, is most accurate)</button>
-      <div class="preview" id="preview" aria-live="polite"></div>
-    </div>
-
-    <div class="field two">
-      <div>
-        <span class="label">Arm</span>
-        <div class="seg wide" id="armSeg" role="group" aria-label="Arm">
-          <button type="button" data-v="L">Left</button>
-          <button type="button" data-v="R">Right</button>
-        </div>
+      <div class="field">
+        <span class="label">Readings <span class="hint">from your cuff, in mmHg</span></span>
+        <div id="readingRows"></div>
+        <button type="button" class="link-btn" id="addRow">Add another reading <span class="hint">2–3, a minute apart, is most accurate</span></button>
+        <div class="preview" id="preview" aria-live="polite"></div>
       </div>
-      <div>
-        <span class="label">Position</span>
-        <div class="seg wide" id="posSeg" role="group" aria-label="Position">
-          <button type="button" data-v="seated">Seated</button>
-          <button type="button" data-v="standing">Standing</button>
-          <button type="button" data-v="lying">Lying</button>
-        </div>
+      <div class="field two">
+        <div><span class="label">Arm</span>
+          <div class="seg wide" id="armSeg" role="group" aria-label="Arm"><button type="button" data-v="L">Left</button><button type="button" data-v="R">Right</button></div></div>
+        <div><span class="label">Position</span>
+          <div class="seg wide" id="posSeg" role="group" aria-label="Position"><button type="button" data-v="seated">Seated</button><button type="button" data-v="standing">Standing</button><button type="button" data-v="lying">Lying</button></div></div>
       </div>
+      <div class="field">
+        <span class="label">What is going on? <span class="hint">tap all that apply</span></span>
+        <div class="chips" id="tagChips"></div>
+      </div>
+      <div class="field">
+        <label for="fNote">Note <span class="hint">optional</span></label>
+        <input type="text" id="fNote" maxlength="200" placeholder="e.g. after a long meeting, new cuff" autocomplete="off">
+      </div>
+      <div class="form-error" id="formError" role="alert" hidden></div>
+      <p class="std-note" id="stdNote"></p>
     </div>
+  </form>
+</dialog>
 
-    <div class="field">
-      <span class="label">What is going on? <span class="hint">tap all that apply</span></span>
-      <div class="chips" id="tagChips"></div>
+<!-- ========== Claude setup sheet ========== -->
+<dialog id="aiDialog" aria-labelledby="aiTitle">
+  <form id="aiForm" method="dialog" novalidate>
+    <div class="grab" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <button type="button" class="text-btn" id="aiClose">Close</button>
+      <h2 id="aiTitle">Claude AI</h2>
+      <span class="head-spacer"></span>
     </div>
+    <div class="sheet-body">
+      <p class="lead">Generate written reports and chat about your readings. This is optional and uses <strong>your own Anthropic API key</strong>, so you pay Anthropic directly for usage.</p>
 
-    <div class="field">
-      <label for="fNote">Note <span class="hint">optional</span></label>
-      <input type="text" id="fNote" maxlength="200" placeholder="e.g. after a long meeting, new cuff…" autocomplete="off">
-    </div>
+      <div class="notice">
+        <strong>What leaves your device</strong>
+        <p>When you generate a report or send a chat message, Baseline sends a summary of your readings straight from this browser to Anthropic (api.anthropic.com): dates, numbers, arm, position and the context tags you picked. It never sends your name or email, and notes are left out unless you turn them on below. Baseline has no server, so nobody else sees it.</p>
+      </div>
 
-    <div class="form-error" id="formError" role="alert" hidden></div>
-    <div class="dlg-foot">
-      <span class="std-note" id="stdNote"></span>
-      <button type="button" class="btn" id="cancelLog">Cancel</button>
-      <button type="submit" class="btn primary" id="saveLog">Save reading</button>
+      <div class="field" id="aiKeyField">
+        <label for="aiKey">API key</label>
+        <input type="password" id="aiKey" placeholder="sk-ant-…" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <p class="hint-line">Create one in the <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic Console</a>. Consider setting a low monthly spend limit on it.</p>
+      </div>
+
+      <div class="field">
+        <span class="label">Model</span>
+        <div class="radio-list" id="aiModels" role="radiogroup" aria-label="Model"></div>
+      </div>
+
+      <div class="switch-list">
+        <label class="switch-row"><span><span class="row-t">Remember key on this device</span><span class="row-s">Off keeps it only until you close the tab</span></span><input type="checkbox" id="aiRemember" class="switch" checked></label>
+        <label class="switch-row"><span><span class="row-t">Include my notes</span><span class="row-s">Notes may contain personal details</span></span><input type="checkbox" id="aiNotes" class="switch"></label>
+        <label class="switch-row"><span><span class="row-t">I understand the above</span><span class="row-s">Required to connect</span></span><input type="checkbox" id="aiConsent" class="switch"></label>
+      </div>
+
+      <div class="form-error" id="aiError" role="alert" hidden></div>
+      <div class="sheet-actions">
+        <button type="submit" class="btn primary block" id="aiSave">Connect</button>
+        <button type="button" class="btn block danger" id="aiForget" hidden>Disconnect and forget key</button>
+      </div>
     </div>
   </form>
 </dialog>
@@ -202,6 +257,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <div class="tip" id="tip" hidden></div>
 
+<script src="ai.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
