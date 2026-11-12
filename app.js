@@ -288,18 +288,26 @@ function enter(el) {
 
 /* ============ sheets ============ */
 function openSheet(d) {
-  d.classList.remove('closing', 'no-anim');
-  if (!d.open) d.showModal();
-  // iPhone Safari safety net: if the slide-in animation leaves the sheet off-screen, drop the animation so it just appears.
-  setTimeout(() => {
-    if (!d.open || d.classList.contains('closing')) return;
-    const r = d.getBoundingClientRect();
-    if (r.top > innerHeight - 40 || r.height < 40) {
-      try { d.getAnimations().forEach(a => a.cancel()); } catch (e) { /* ignore */ }
-      d.classList.add('no-anim');
-    }
-  }, 700);
+  // Plain fixed panel + our own scrim (not showModal): iPhone WebKit failed to paint modal dialogs.
+  d.classList.remove('closing');
+  if (d.open) return;
+  const scrim = document.createElement('div');
+  scrim.className = 'sheet-scrim';
+  scrim.addEventListener('click', () => closeSheet(d));
+  document.body.appendChild(scrim);
+  d._scrim = scrim;
+  document.documentElement.classList.add('sheet-open');
+  d.show();
+  d.addEventListener('close', () => {
+    if (d._scrim) { d._scrim.remove(); d._scrim = null; }
+    if (!document.querySelector('dialog[open]')) document.documentElement.classList.remove('sheet-open');
+  }, { once: true });
 }
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const d = [...document.querySelectorAll('dialog[open]')].pop();
+  if (d) closeSheet(d);
+});
 function closeSheet(d) {
   if (!d.open || d.classList.contains('closing')) return;
   if (RM()) { d.close(); return; }

@@ -341,13 +341,15 @@ button.row:active { background: var(--fill); }
 .tabbar a .i { width: 25px; height: 25px; transition: transform .4s var(--spring); }
 .tabbar a[aria-current="page"] { color: var(--accent); }
 .tabbar a[aria-current="page"] .i { transform: scale(1.1); fill: color-mix(in srgb, var(--accent) 18%, transparent); }
-.tab-add { flex: none; align-self: center; width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; margin: 0 6px; box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent); transition: transform .25s var(--spring); }
+.tab-add { flex: none; align-self: center; width: 48px; height: 48px; padding: 0; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; margin: 0 6px; box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent); transition: transform .25s var(--spring); }
 .tab-add:active { transform: scale(.9); }
-.tab-add .i { width: 24px; height: 24px; stroke-width: 2.4; }
+.tab-add .i { display: block; width: 24px; height: 24px; margin: 0; stroke-width: 2.4; }
 
 /* ---------- sheets (dialogs) ---------- */
-dialog { border: 0; padding: 0; width: 100%; max-width: 100%; margin: auto 0 0; max-height: 92%; background: var(--bg); color: var(--ink); border-radius: 22px 22px 0 0; overflow: hidden; box-shadow: 0 -10px 50px rgba(0, 0, 0, .25); }
-dialog[open] { display: flex; flex-direction: column; }
+dialog { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 80; border: 0; padding: 0; width: 100%; max-width: 100%; margin: 0; max-height: 92%; background: var(--bg); color: var(--ink); border-radius: 22px 22px 0 0; overflow: hidden; box-shadow: 0 -10px 50px rgba(0, 0, 0, .25); }
+dialog[open] { display: flex; flex-direction: column; animation: fadeIn .25s ease both; }
+.sheet-scrim { position: fixed; inset: 0; z-index: 79; background: rgba(0, 0, 0, .45); animation: fadeIn .25s ease both; }
+.sheet-open { overflow: hidden; }
 dialog.closing { opacity: 0; transition: opacity .2s; }
 dialog.no-anim, dialog.no-anim[open] { animation: none; transform: none; }
 dialog::backdrop { background: rgba(0, 0, 0, .45); }
@@ -596,7 +598,7 @@ input:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--acce
   .composer { bottom: 20px; }
   .toast { bottom: 28px; }
   .guide { grid-template-columns: 1.1fr 1fr; gap: 32px; }
-  dialog { margin: auto; width: min(560px, calc(100vw - 40px)); border-radius: 24px; max-height: min(88dvh, 820px); }
+  dialog { top: 0; bottom: 0; left: 0; right: 0; margin: auto; height: fit-content; width: min(560px, calc(100vw - 40px)); border-radius: 24px; max-height: min(88dvh, 820px); }
   dialog[open] { animation: sheetInDesk .4s var(--spring) both; }
   dialog.closing { animation: sheetOutDesk .22s ease-in both; }
   .grab { display: none; }
