@@ -350,7 +350,7 @@ dialog { border: 0; padding: 0; width: 100%; max-width: 100%; margin: auto 0 0; 
 dialog[open] { display: flex; flex-direction: column; }
 dialog.closing { opacity: 0; transition: opacity .2s; }
 dialog.no-anim, dialog.no-anim[open] { animation: none; transform: none; }
-dialog::backdrop { background: rgba(0, 0, 0, .38); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+dialog::backdrop { background: rgba(0, 0, 0, .45); }
 dialog[open]::backdrop { animation: fadeIn .3s ease both; }
 dialog.closing::backdrop { animation: fadeOut .3s ease both; }
 dialog form { display: flex; flex-direction: column; min-height: 0; flex: 1; }
