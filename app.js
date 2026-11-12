@@ -1034,6 +1034,7 @@ function renderGuideTable() {
 function applyTheme(mode) {
   if (mode === 'light' || mode === 'dark') document.documentElement.setAttribute('data-theme', mode);
   else document.documentElement.removeAttribute('data-theme');
+  void document.documentElement.offsetHeight;   // force a style recalc (iOS can skip it)
   const lc = $('#tcLight'), dc = $('#tcDark');
   if (mode === 'dark') { lc.content = dc.content = '#000000'; }
   else if (mode === 'light') { lc.content = dc.content = '#f2f2f7'; }

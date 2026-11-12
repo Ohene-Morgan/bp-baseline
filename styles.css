@@ -50,6 +50,18 @@
   --s1: #3987e5; --s2: #d95926; --s3: #199e70;
   --c-normal: #35c28f; --c-elev: #e3b341; --c-s1: #f08a45; --c-s2: #f26b6b; --c-crisis: #e0569a; --c-low: #7ea0e0;
 }
+/* Explicit light block: older iOS WebKit does not always re-evaluate :where(:not([data-theme])) when the attribute changes, so light must not rely on it. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f2f2f7; --card: #ffffff; --fill: #eeeef2; --fill-2: #e4e4ea;
+  --ink: #111114; --ink-2: #55555c; --muted: #6c6c72; --line: #e3e3e8; --grid: #ececf0;
+  --bar: rgba(249, 249, 251, .82);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --c-normal: #12805c; --c-elev: #b07d00; --c-s1: #d2601a; --c-s2: #c93333; --c-crisis: #9b1c5a; --c-low: #4a6fb3;
+  --flame: #f26a1b; --flame-2: #ffb43d;
+}
+:root[data-theme="light"] .seg .thumb { background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(255, 255, 255, .82)); box-shadow: 0 1px 3px rgba(0, 0, 0, .15), 0 0 0 .5px rgba(0, 0, 0, .05), inset 0 1px 0 #fff; }
+
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html { -webkit-text-size-adjust: 100%; scroll-padding-top: 72px; }
