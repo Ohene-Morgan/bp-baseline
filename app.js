@@ -287,40 +287,172 @@ function enter(el) {
 }
 
 /* ============ sheets ============ */
+/* Sheets are plain fixed <div role="dialog" aria-modal="true" hidden> panels with our own scrim.
+   No <dialog>, show() or showModal(): on iPhone WebKit every <dialog> variant showed only the dim
+   layer. After opening, a self-check confirms the sheet is really on screen; if not, it is forced
+   full-screen and a diagnostic banner (klDiag, defined inline in index.html) explains what failed.
+   The banner never shows in normal use: only on a failed open, or always with ?debug=1. */
+const SHEET_DEBUG = !!window.__klDebug;
+const isSheetOpen = d => !!d && d.classList.contains('is-open');
+const openSheets = () => $$('.sheet.is-open:not(.closing)');
+const finePointer = () => !matchMedia('(pointer: coarse)').matches;
+function sizeSheet(d) {
+  // px from innerHeight rather than vh/dvh/%: iOS vh is the large viewport and can exceed what is visible.
+  const f = d.querySelector('form'); if (!f || d._forced) return;
+  const h = window.innerHeight || document.documentElement.clientHeight || 640;
+  const desk = matchMedia('(min-width: 820px)').matches;
+  f.style.maxHeight = Math.round(desk ? Math.min(h * .88, 820) : h * .92) + 'px';
+}
+window.addEventListener('resize', () => openSheets().forEach(sizeSheet));
 function openSheet(d) {
-  // Plain fixed panel + our own scrim (not showModal): iPhone WebKit failed to paint modal dialogs.
-  d.classList.remove('closing');
-  if (d.open) return;
-  const scrim = document.createElement('div');
-  scrim.className = 'sheet-scrim';
-  scrim.addEventListener('click', () => closeSheet(d));
-  document.body.appendChild(scrim);
-  d._scrim = scrim;
-  document.documentElement.classList.add('sheet-open');
-  d.show();
-  d.addEventListener('close', () => {
-    if (d._scrim) { d._scrim.remove(); d._scrim = null; }
-    if (!document.querySelector('dialog[open]')) document.documentElement.classList.remove('sheet-open');
-  }, { once: true });
+  try {
+    if (!d) throw new Error('Sheet element not found');
+    if (isSheetOpen(d) && !d.classList.contains('closing')) return;
+    const reopening = isSheetOpen(d);            // reopened mid-close: cancel the close
+    clearTimeout(d._closeT); d._closeTok = null; d.classList.remove('closing');
+    if (!d._scrim) {
+      const scrim = document.createElement('div');
+      scrim.className = 'sheet-scrim';
+      scrim.addEventListener('click', () => closeSheet(d));
+      d.parentNode.insertBefore(scrim, d);
+      d._scrim = scrim;
+    } else d._scrim.classList.remove('closing');
+    if (!reopening) d._returnFocus = document.activeElement;
+    sizeSheet(d);
+    d.hidden = false;
+    d.classList.add('is-open');
+    document.documentElement.classList.add('sheet-open');
+    // Move focus into the sheet for keyboard and screen-reader users; skipped on touch so iOS never scrolls or pops a keyboard.
+    if (finePointer()) { try { d.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+    const stamp = d._openStamp = Date.now();
+    setTimeout(() => checkSheet(d, stamp), 600);
+  } catch (err) { sheetFail(d, err, 'openSheet'); }
+}
+function closeSheet(d) {
+  if (!d) return;
+  if (!isSheetOpen(d)) { finishClose(d); return; }   // idempotent: still clears any stray scrim
+  if (d.classList.contains('closing')) return;
+  if (RM()) { finishClose(d); return; }
+  d.classList.add('closing');
+  if (d._scrim) d._scrim.classList.add('closing');
+  const tok = d._closeTok = {};
+  const done = e => {
+    if (e && e.target !== d) return;
+    d.removeEventListener('animationend', done); d.removeEventListener('webkitAnimationEnd', done);
+    if (d._closeTok === tok) finishClose(d);
+  };
+  d.addEventListener('animationend', done); d.addEventListener('webkitAnimationEnd', done);
+  d._closeT = setTimeout(done, 350);
+}
+function finishClose(d) {
+  clearTimeout(d._closeT); d._closeTok = null;
+  const was = isSheetOpen(d);
+  d.classList.remove('is-open', 'closing');
+  d.hidden = true;
+  if (d._forced) {
+    d._forced = false; d.style.cssText = '';
+    $$('form, .sheet-body', d).forEach(el => { el.style.cssText = ''; });
+  }
+  if (d._scrim) { d._scrim.remove(); d._scrim = null; }
+  if (!$$('.sheet.is-open').length) document.documentElement.classList.remove('sheet-open');
+  if (!was) return;
+  const back = d._returnFocus; d._returnFocus = null;
+  const a = document.activeElement;
+  if (finePointer() && back && back.focus && document.contains(back) && (!a || a === document.body || d.contains(a))) { try { back.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  let ev; try { ev = new Event('close'); } catch (e) { ev = document.createEvent('Event'); ev.initEvent('close', false, false); }
+  d.dispatchEvent(ev);   // existing 'close' listeners (e.g. the welcome sheet's nameAsked) keep working
 }
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
-  const d = [...document.querySelectorAll('dialog[open]')].pop();
-  if (d) closeSheet(d);
+  const open = openSheets(), d = open[open.length - 1];
+  if (!d) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeSheet(d); return; }
+  if (e.key !== 'Tab') return;
+  // Keep keyboard focus inside the open sheet (aria-modal).
+  const items = $$('a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), textarea, select, [tabindex]:not([tabindex="-1"])', d)
+    .filter(el => el.offsetWidth || el.offsetHeight);
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1], a = document.activeElement;
+  if (!d.contains(a)) { e.preventDefault(); first.focus(); }
+  else if (e.shiftKey && (a === first || a === d)) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
 });
-function closeSheet(d) {
-  if (!d.open || d.classList.contains('closing')) return;
-  if (RM()) { d.close(); return; }
-  let done = false;
-  const finish = () => { if (done) return; done = true; d.classList.remove('closing'); d.close(); };
-  d.classList.add('closing');
-  d.addEventListener('animationend', e => { if (e.target === d) finish(); });
-  setTimeout(finish, 450);
-}
 function wireSheet(d, closeBtns) {
-  d.addEventListener('cancel', e => { e.preventDefault(); closeSheet(d); });
-  d.addEventListener('click', e => { if (e.target === d) closeSheet(d); });
   closeBtns.forEach(b => b && b.addEventListener('click', () => closeSheet(d)));
+  // Forms no longer use method="dialog"; never let a sheet form navigate, even if its handler throws.
+  const f = d.querySelector('form'); if (f) f.addEventListener('submit', e => e.preventDefault());
+}
+
+/* ---------- sheet self-check and fallback ---------- */
+const describeEl = el => !el ? 'nothing' : el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : '');
+function sheetReport(d) {
+  const r = d.getBoundingClientRect(), cs = getComputedStyle(d), W = window.innerWidth, H = window.innerHeight;
+  const f = d.querySelector('form'), fr = f ? f.getBoundingClientRect() : null, vv = window.visualViewport, n = Math.round;
+  let problem = '';
+  if (cs.display === 'none') problem = 'display is none';
+  else if (cs.visibility !== 'visible') problem = 'visibility is ' + cs.visibility;
+  else if (parseFloat(cs.opacity) < .5) problem = 'opacity is ' + cs.opacity;
+  else if (r.width < 40 || r.height < 40) problem = 'size is ' + n(r.width) + 'x' + n(r.height);
+  else if (r.bottom <= 0 || r.top >= H || r.right <= 0 || r.left >= W) problem = 'it is off-screen';
+  else {
+    // A paint/compositing bug can leave the rect fine while nothing shows: check what is actually hit.
+    const x = (Math.max(r.left, 0) + Math.min(r.right, W)) / 2, y = (Math.max(r.top, 0) + Math.min(r.bottom, H)) / 2;
+    const hit = document.elementFromPoint(x, y);
+    const benign = hit && hit.closest && hit.closest('#klDiag, .toast');   // our own banner/toast is not a failure
+    if (!benign && (!hit || !d.contains(hit))) problem = 'its centre is covered by ' + describeEl(hit);
+  }
+  const text = [
+    'sheet #' + d.id + (d._forced ? ' (forced)' : ''),
+    'rect x' + n(r.left) + ' y' + n(r.top) + ' w' + n(r.width) + ' h' + n(r.height) + (fr ? ' | form h' + n(fr.height) : ''),
+    'viewport ' + W + 'x' + H + (vv ? ' | visual ' + n(vv.width) + 'x' + n(vv.height) + ' top' + n(vv.offsetTop) : '') + ' | scrollY ' + n(window.pageYOffset || 0),
+    'display ' + cs.display + ' | position ' + cs.position + ' | opacity ' + cs.opacity + ' | visibility ' + cs.visibility + ' | z ' + cs.zIndex,
+    'height ' + cs.height + ' | max-h ' + cs.maxHeight + ' | top ' + cs.top + ' | bottom ' + cs.bottom + ' | transform ' + cs.transform + ' | anim ' + (cs.animationName || cs.webkitAnimationName || ''),
+    'HTMLDialogElement ' + typeof window.HTMLDialogElement + ' | color-mix ' + (window.CSS && CSS.supports ? CSS.supports('color', 'color-mix(in srgb, red 50%, blue)') : '?') + ' | coarse ' + !finePointer(),
+  ].join('\n');
+  return { problem, text };
+}
+const safeReport = d => { try { return sheetReport(d).text; } catch (e) { return 'report failed: ' + e; } };
+function sheetDiag(title, text, ok) {
+  try {
+    if (window.klDiag) window.klDiag(title, text, ok);
+    // Debug mode: the hit test cannot detect a pure paint bug, so let the tester force the fallback by hand.
+    const box = document.getElementById('klDiag'), open = openSheets(), d = open[open.length - 1];
+    if (ok && box && d) {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Show full-screen';
+      b.style.cssText = 'font:600 13px -apple-system,system-ui,sans-serif;color:#000;background:#fff;border:0;border-radius:8px;padding:8px 12px;-webkit-appearance:none;';
+      b.onclick = () => { forceSheet(d); b.textContent = 'Forced'; };
+      box.appendChild(b);
+    }
+  } catch (e) { /* ignore */ }
+}
+function checkSheet(d, stamp) {
+  if (!isSheetOpen(d) || d.classList.contains('closing') || d._openStamp !== stamp || d._forced) return;
+  let rep;
+  try { rep = sheetReport(d); } catch (err) { sheetFail(d, err, 'checkSheet'); return; }
+  if (rep.problem) {
+    forceSheet(d);
+    sheetDiag('This screen did not appear (' + rep.problem + '), so it is now shown full-screen.', rep.text + '\n\nAfter forcing:\n' + safeReport(d));
+  } else if (SHEET_DEBUG) sheetDiag('Sheet check passed (debug mode)', rep.text, true);
+}
+/* Last resort: pin the sheet to the whole screen with inline !important styles and no flex layout. */
+function forceSheet(d) {
+  if (!d) return;
+  d._forced = true;
+  d.hidden = false; d.classList.add('is-open'); d.classList.remove('closing');
+  document.documentElement.classList.add('sheet-open');
+  const bs = getComputedStyle(document.body);
+  const bg = bs.backgroundColor && !/rgba\(0, 0, 0, 0\)|transparent/.test(bs.backgroundColor) ? bs.backgroundColor : '#f2f2f7';
+  const set = (el, props) => Object.keys(props).forEach(k => el.style.setProperty(k, props[k], 'important'));
+  set(d, { display: 'block', position: 'fixed', top: '0px', left: '0px', right: '0px', bottom: '0px', width: '100%', height: '100%',
+    'max-width': 'none', 'max-height': 'none', margin: '0px', opacity: '1', visibility: 'visible', transform: 'none', '-webkit-transform': 'none',
+    animation: 'none', '-webkit-animation': 'none', 'z-index': '2147483646', overflow: 'auto', '-webkit-overflow-scrolling': 'touch',
+    'border-radius': '0px', background: bg, color: bs.color || '#111114', 'padding-top': 'env(safe-area-inset-top)' });
+  $$('form', d).forEach(f => set(f, { display: 'block', 'max-height': 'none', height: 'auto', opacity: '1', visibility: 'visible' }));
+  $$('.sheet-body', d).forEach(b => set(b, { overflow: 'visible', 'max-height': 'none' }));
+}
+function sheetFail(d, err, where) {
+  const msg = err && err.message ? err.message : String(err);
+  try { if (d) forceSheet(d); } catch (e) { /* ignore */ }
+  sheetDiag('Something went wrong opening this screen (' + where + ').', msg + (err && err.stack ? '\n' + err.stack : '') + (d ? '\n\n' + safeReport(d) : ''));
 }
 
 /* ============ router ============ */
@@ -347,7 +479,7 @@ function renderTodayHead() {
 }
 function maybeWelcome() {
   const m = readMeta();
-  if (!m.name && !m.nameAsked && !state.sessions.length && !location.hash.startsWith('#log')) setTimeout(() => { openSheet($('#nameDialog')); setTimeout(() => $('#nameIn').focus({ preventScroll: true }), 420); }, 700);
+  if (!m.name && !m.nameAsked && !state.sessions.length && !location.hash.startsWith('#log')) setTimeout(() => { openSheet($('#nameDialog')); if (finePointer()) setTimeout(() => { if (isSheetOpen($('#nameDialog'))) $('#nameIn').focus({ preventScroll: true }); }, 420); }, 700);
 }
 function renderView(v = state.view) {
   if (v === 'today') { renderTodayHead(); renderStreak(); renderHero(); renderWeek(); renderBackup(); }
@@ -958,6 +1090,16 @@ function syncFormUI() {
   updateStdNote();
 }
 function openLog(session) {
+  // Open the sheet even if preparing the form fails, then report the error (see sheetFail).
+  let setupErr = null;
+  try { prepLog(session); } catch (err) { setupErr = err; }
+  openSheet($('#logDialog'));
+  if (setupErr) sheetFail(null, setupErr, 'openLog setup');
+  requestAnimationFrame(() => { try { refreshSegs(); } catch (e) { /* cosmetic */ } });
+  // Autofocus only with a real keyboard; on phones it pops the keyboard over the sheet (and iOS can shove the sheet off-screen).
+  if (finePointer()) setTimeout(() => { const f = $('[data-f=sys]'); if (f && !session && isSheetOpen($('#logDialog'))) f.focus({ preventScroll: true }); }, 380);
+}
+function prepLog(session) {
   state.editing = session ? session.id : null;
   $('#logTitle').textContent = session ? 'Edit reading' : 'New reading';
   $('#readingRows').innerHTML = '';
@@ -970,10 +1112,6 @@ function openLog(session) {
   const rd = session ? (session.readings && session.readings.length ? session.readings : [{ sys: session.sys, dia: session.dia, pulse: session.pulse }]) : [null];
   rd.forEach(r => addRow(r));
   syncFormUI(); updatePreview();
-  openSheet($('#logDialog'));
-  requestAnimationFrame(() => refreshSegs());
-  // Autofocus only with a real keyboard; on phones it pops the keyboard over the sheet (and iOS can shove the sheet off-screen).
-  if (!matchMedia('(pointer: coarse)').matches) setTimeout(() => { const f = $('[data-f=sys]'); if (f && !session) f.focus({ preventScroll: true }); }, 380);
 }
 /* Date and time: friendly pills over native pickers, kept in sync with one hidden value (YYYY-MM-DDTHH:mm). */
 function setWhen(ts) {

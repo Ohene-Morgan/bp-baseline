@@ -19,10 +19,62 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 <script>
   // Apply the saved theme before first paint to avoid a flash.
   try { var t = localStorage.getItem('bp-baseline:theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+</script>
+<script>
+  // Diagnostics (kept inline and old-syntax so it works even if app.js fails to load or parse).
+  // Errors are always recorded; the banner shows only with ?debug=1 or when a sheet fails to open (app.js).
+  (function () {
+    var errs = window.__klErrs = [];
+    var debug = window.__klDebug = /[?&]debug=1(&|#|$)/.test(location.search);
+    window.klDiag = function (title, details, ok) {
+      try {
+        var all = title + '\n' + (details || '') + (errs.length ? '\n\nRecent errors:\n' + errs.slice(-4).join('\n---\n') : '') +
+          '\n\n' + navigator.userAgent + '\n' + location.href;
+        var box = document.getElementById('klDiag');
+        if (!box) {
+          box = document.createElement('div'); box.id = 'klDiag'; box.setAttribute('role', 'alert');
+          document.documentElement.appendChild(box);
+        }
+        box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;box-sizing:border-box;max-height:50vh;overflow:auto;' +
+          '-webkit-overflow-scrolling:touch;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));' +
+          'background:' + (ok ? '#1f3a2b' : '#9b1020') + ';color:#fff;font:13px/1.35 -apple-system,system-ui,sans-serif;' +
+          'box-shadow:0 4px 18px rgba(0,0,0,.35);text-align:left;';
+        box.innerHTML = '';
+        var h = document.createElement('div'); h.style.cssText = 'font-weight:700;margin-bottom:4px;'; h.textContent = title; box.appendChild(h);
+        var p = document.createElement('div'); p.style.cssText = 'opacity:.9;margin-bottom:6px;';
+        p.textContent = 'Please screenshot this, or tap Copy details and paste it to the developer.'; box.appendChild(p);
+        var pre = document.createElement('pre');
+        pre.style.cssText = 'white-space:pre-wrap;word-break:break-word;margin:0 0 8px;font:11px/1.35 Menlo,ui-monospace,monospace;-webkit-user-select:text;user-select:text;';
+        pre.textContent = all; box.appendChild(pre);
+        var btn = function (label, fn) {
+          var b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+          b.style.cssText = 'font:600 13px -apple-system,system-ui,sans-serif;color:#000;background:#fff;border:0;border-radius:8px;padding:8px 12px;margin-right:8px;-webkit-appearance:none;';
+          b.onclick = fn; box.appendChild(b); return b;
+        };
+        var copy = btn('Copy details', function () {
+          var okc = function () { copy.textContent = 'Copied'; };
+          var fallback = function () {
+            try { var ta = document.createElement('textarea'); ta.value = all; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+              document.documentElement.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, all.length);
+              document.execCommand('copy'); ta.parentNode.removeChild(ta); okc(); } catch (e) { copy.textContent = 'Copy failed: screenshot instead'; }
+          };
+          try { navigator.clipboard.writeText(all).then(okc, fallback); } catch (e) { fallback(); }
+        });
+        btn('Dismiss', function () { box.parentNode.removeChild(box); });
+      } catch (e) { /* never let diagnostics break the app */ }
+    };
+    function rec(m) { errs.push(m); if (errs.length > 20) errs.shift(); if (debug) window.klDiag('Script error (debug mode)', m); }
+    window.addEventListener('error', function (e) {
+      rec((e.message || 'Error') + (e.filename ? ' @ ' + String(e.filename).split('/').pop() + ':' + e.lineno + ':' + e.colno : '') + (e.error && e.error.stack ? '\n' + e.error.stack : ''));
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e.reason; rec('Unhandled rejection: ' + (r && (r.stack || r.message) || String(r)));
+    });
+  })();
 </script>
 </head>
 <body>
@@ -182,14 +234,14 @@
 <nav class="tabbar" aria-label="Sections">
   <a href="#today" data-nav="today"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><span>Today</span></a>
   <a href="#trends" data-nav="trends"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg><span>Trends</span></a>
-  <button class="tab-add" id="openLog" type="button" aria-label="Log a reading"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="tab-add" id="openLog" type="button" aria-label="Log a reading"><svg class="i" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
   <a href="#insights" data-nav="insights"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg><span>Insights</span></a>
   <a href="#settings" data-nav="settings"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>Settings</span></a>
 </nav>
 
 <!-- ========== Log sheet ========== -->
-<dialog id="logDialog" aria-labelledby="logTitle">
-  <form id="logForm" method="dialog" novalidate>
+<div class="sheet" id="logDialog" role="dialog" aria-modal="true" aria-labelledby="logTitle" tabindex="-1" hidden>
+  <form id="logForm" action="#" novalidate>
     <div class="grab" aria-hidden="true"></div>
     <div class="sheet-head">
       <button type="button" class="text-btn" id="cancelLog">Cancel</button>
@@ -237,11 +289,11 @@
       <button type="submit" class="btn primary block" id="saveLog" disabled>Save reading</button>
     </div>
   </form>
-</dialog>
+</div>
 
 <!-- ========== Welcome sheet (asks her name once) ========== -->
-<dialog id="nameDialog" aria-labelledby="nameTitle">
-  <form id="nameForm" method="dialog" novalidate>
+<div class="sheet" id="nameDialog" role="dialog" aria-modal="true" aria-labelledby="nameTitle" tabindex="-1" hidden>
+  <form id="nameForm" action="#" novalidate>
     <div class="grab" aria-hidden="true"></div>
     <div class="sheet-head center"><h2 id="nameTitle">Welcome to Kayline</h2></div>
     <div class="sheet-body">
@@ -253,11 +305,11 @@
       <button type="button" class="link-btn" id="nameSkip">Not now</button>
     </div>
   </form>
-</dialog>
+</div>
 
 <!-- ========== Claude setup sheet ========== -->
-<dialog id="aiDialog" aria-labelledby="aiTitle">
-  <form id="aiForm" method="dialog" novalidate>
+<div class="sheet" id="aiDialog" role="dialog" aria-modal="true" aria-labelledby="aiTitle" tabindex="-1" hidden>
+  <form id="aiForm" action="#" novalidate>
     <div class="grab" aria-hidden="true"></div>
     <div class="sheet-head">
       <button type="button" class="text-btn" id="aiClose">Close</button>
@@ -296,7 +348,7 @@
       </div>
     </div>
   </form>
-</dialog>
+</div>
 
 <div class="celebrate" id="celebrate" role="dialog" aria-modal="true" aria-labelledby="celTitle" hidden>
   <div class="cel-card">
@@ -311,7 +363,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <div class="tip" id="tip" hidden></div>
 
-<script src="ai.js?v=18"></script>
-<script src="app.js?v=18"></script>
+<script src="ai.js?v=19"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

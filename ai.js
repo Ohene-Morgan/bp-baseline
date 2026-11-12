@@ -331,15 +331,19 @@ Task: chat. Answer concisely, usually under 150 words, grounded in the DATA bloc
     $('#aiModels').innerHTML = MODELS.map(m => `<label class="radio"><input type="radio" name="aiModel" value="${m.id}" ${cfg.model === m.id ? 'checked' : ''}><span><span class="rt">${m.label}</span><span class="rs">${m.note}</span></span></label>`).join('');
   }
   function openSetup() {
-    const on = connected();
-    renderModels();
-    $('#aiKey').value = '';
-    $('#aiKey').placeholder = on ? 'Key saved. Paste a new one to replace it.' : 'sk-ant-…';
-    $('#aiRemember').checked = cfg.remember; $('#aiNotes').checked = cfg.notes; $('#aiConsent').checked = cfg.consent;
-    $('#aiSave').textContent = on ? 'Save changes' : 'Connect';
-    $('#aiForget').hidden = !on;
-    $('#aiError').hidden = true;
-    openSheet($('#aiDialog'));
+    let setupErr = null;
+    try {
+      const on = connected();
+      renderModels();
+      $('#aiKey').value = '';
+      $('#aiKey').placeholder = on ? 'Key saved. Paste a new one to replace it.' : 'sk-ant-…';
+      $('#aiRemember').checked = cfg.remember; $('#aiNotes').checked = cfg.notes; $('#aiConsent').checked = cfg.consent;
+      $('#aiSave').textContent = on ? 'Save changes' : 'Connect';
+      $('#aiForget').hidden = !on;
+      $('#aiError').hidden = true;
+    } catch (err) { setupErr = err; }
+    openSheet($('#aiDialog'));   // open even if preparing failed, then report it
+    if (setupErr) sheetFail(null, setupErr, 'Claude setup');
   }
   async function submitSetup(e) {
     e.preventDefault();
