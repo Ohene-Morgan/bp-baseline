@@ -287,7 +287,19 @@ function enter(el) {
 }
 
 /* ============ sheets ============ */
-function openSheet(d) { d.classList.remove('closing'); if (!d.open) d.showModal(); }
+function openSheet(d) {
+  d.classList.remove('closing', 'no-anim');
+  if (!d.open) d.showModal();
+  // iPhone Safari safety net: if the slide-in animation leaves the sheet off-screen, drop the animation so it just appears.
+  setTimeout(() => {
+    if (!d.open || d.classList.contains('closing')) return;
+    const r = d.getBoundingClientRect();
+    if (r.top > innerHeight - 40 || r.height < 40) {
+      try { d.getAnimations().forEach(a => a.cancel()); } catch (e) { /* ignore */ }
+      d.classList.add('no-anim');
+    }
+  }, 700);
+}
 function closeSheet(d) {
   if (!d.open || d.classList.contains('closing')) return;
   if (RM()) { d.close(); return; }
@@ -952,7 +964,8 @@ function openLog(session) {
   syncFormUI(); updatePreview();
   openSheet($('#logDialog'));
   requestAnimationFrame(() => refreshSegs());
-  setTimeout(() => { const f = $('[data-f=sys]'); if (f && !session) f.focus({ preventScroll: true }); }, 380);
+  // Autofocus only with a real keyboard; on phones it pops the keyboard over the sheet (and iOS can shove the sheet off-screen).
+  if (!matchMedia('(pointer: coarse)').matches) setTimeout(() => { const f = $('[data-f=sys]'); if (f && !session) f.focus({ preventScroll: true }); }, 380);
 }
 /* Date and time: friendly pills over native pickers, kept in sync with one hidden value (YYYY-MM-DDTHH:mm). */
 function setWhen(ts) {

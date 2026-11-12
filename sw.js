@@ -1,7 +1,7 @@
 /* Kayline service worker: network-first for the app shell, with an offline fallback.
    Only same-origin GET requests are handled; calls to api.anthropic.com pass straight through. */
-const CACHE = 'kayline-v14';
-const SHELL = ['./', 'index.html', 'styles.css?v=14', 'app.js?v=14', 'ai.js?v=14', 'manifest.webmanifest',
+const CACHE = 'kayline-v15';
+const SHELL = ['./', 'index.html', 'styles.css?v=15', 'app.js?v=15', 'ai.js?v=15', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png'];
 
 self.addEventListener('install', e => {
